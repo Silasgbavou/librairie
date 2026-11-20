@@ -585,7 +585,7 @@ function pageAuteur() {
   <section><div class="wrap deux-col">
     <div>
       <h2>L'écrivain</h2>
-      <p style="margin:14px 0 18px;max-width:62ch">Son activité littéraire est principalement consacrée à l'enseignement de la Parole de Dieu, à l'enseignement doctrinal et à la formation chrétienne. Il considère l'écriture comme un moyen de préserver, de structurer et de transmettre les enseignements de la Parole de Dieu aux générations présentes et futures.</p>
+      <p style="margin:14px 0 18px;max-width:62ch">Son activité littéraire est principalement consacrée à l'enseignement de la Parole de Dieu, à la doctrine biblique et à la formation chrétienne. Il considère l'écriture comme un moyen de préserver, de structurer et de transmettre les enseignements de la Parole de Dieu aux générations présentes et futures.</p>
       <ul class="points">${A.ecriture.map(e => `<li>${esc(e)}</li>`).join("")}</ul>
     </div>
     <div><blockquote class="citation">${esc(A.citation)}<small>Docteur B. Silas Gbavou</small></blockquote>
@@ -937,7 +937,7 @@ window.addEventListener("scroll", surDefilement, { passive: true }); surDefileme
 
 /* ---------- Chargement ---------- */
 vue.innerHTML = `<p class="chargement">Chargement de la bibliothèque…</p>`;
-Promise.all([fetch("data/livres.json?v=20261120y").then(r => r.json()), fetch("data/config.json?v=20261120y").then(r => r.json())])
+Promise.all([fetch("data/livres.json?v=20261120z").then(r => r.json()), fetch("data/config.json?v=20261120z").then(r => r.json())])
   .then(([l, c]) => {
     TOUS = l; LIVRES = l.filter(x => x.disponible !== false); CFG = c;
     THEMES = [...new Set(LIVRES.map(x => x.theme))];
