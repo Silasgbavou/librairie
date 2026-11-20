@@ -562,7 +562,8 @@ const PROFILS = [
   { id: "offrir", nom: "Offrir un livre", mots: ["offrir", "cadeau", "anniversaire", "pour mon pasteur", "pour un ami", "pour ma femme", "pour mon mari"] }
 ];
 let besoinChoisi = "", texteAssistant = "", LEXIQUE = null;
-fetch("data/concepts.json?v=20261121j").then(r => r.json()).then(d => { LEXIQUE = d; if (texteAssistant.trim()) majAssistant(false); }).catch(() => {});
+let lexiqueEnCours = null;
+const chargerLexique = () => lexiqueEnCours || (lexiqueEnCours = fetch("data/concepts.json?v=20261121k").then(r => r.json()).then(d => { LEXIQUE = d; if (texteAssistant.trim()) majAssistant(false); }).catch(() => { lexiqueEnCours = null; }));
 /* Propositions affichées : une sélection différente à chaque visite. */
 const PROPOSITIONS = (() => { const a = BESOINS.map(b => b.id); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a.slice(0, 8); })();
 const prep = t => " " + normal(t || "").replace(/[’'ʼ]/g, " ").replace(/[^a-z0-9-]+/g, " ").replace(/\s+/g, " ") + " ";
@@ -667,11 +668,12 @@ function majAssistant(defiler) {
 }
 document.addEventListener("submit", e => {
   if (e.target.id !== "aide-form") return;
-  e.preventDefault();
+  e.preventDefault(); chargerLexique();
   const q = $("#aide-q"); texteAssistant = q ? q.value : ""; besoinChoisi = "";
   if (texteAssistant.trim()) mesure("assistant");
   majAssistant(true); if (q) q.blur();
 });
+document.addEventListener("focusin", e => { if (e.target.id === "aide-q") chargerLexique(); });
 document.addEventListener("keydown", e => {
   if (e.target.id === "aide-q" && e.key === "Enter" && !e.shiftKey) { e.preventDefault(); e.target.form.requestSubmit ? e.target.form.requestSubmit() : e.target.form.dispatchEvent(new Event("submit", { cancelable: true, bubbles: true })); }
 });
@@ -822,7 +824,29 @@ function pageConditions() {
     <p>Le règlement s'effectue en ligne, en FCFA, sur notre page de paiement sécurisée : Mobile Money ou carte bancaire. Les équivalences en euros ou en dollars affichées sur le site sont indicatives.</p>
     <h2>Conclusion de l'acquisition</h2>
     <p>L'acquisition est conclue à la confirmation du paiement ; le PDF vous est alors remis automatiquement. Pour toute question, l'auteur vous répond directement sur WhatsApp.</p>
-    <div class="liens-infos"><a class="btn btn-capsule btn-petit" href="#livraison">Livraison et problèmes</a><a class="btn btn-capsule btn-petit" href="#confidentialite">Confidentialité</a></div>
+    <h2>Rétractation et remboursement</h2>
+    <p>Le livre numérique étant remis dès le paiement, son téléchargement ne permet pas de rétractation. Si le fichier reçu est illisible, incomplet ou ne correspond pas au titre acquis, écrivez-nous : le bon fichier vous est remis ou, à défaut, le montant vous est remboursé.</p>
+    <h2>Droits d'auteur</h2>
+    <p>Chaque livre est réservé à l'usage personnel de l'acquéreur. Toute reproduction, diffusion ou revente sans l'autorisation écrite de l'auteur est interdite.</p>
+    <div class="liens-infos"><a class="btn btn-capsule btn-petit" href="#livraison">Livraison et problèmes</a><a class="btn btn-capsule btn-petit" href="#confidentialite">Confidentialité</a><a class="btn btn-capsule btn-petit" href="#mentions">Mentions légales</a></div>
+  </div></section>`;
+}
+function pageMentions() {
+  const I = CFG.infosLegales || {}, mail = (CFG.contacts.find(c => c.type === "email") || {}).valeur;
+  return `<section style="padding-top:clamp(28px,4vw,48px)"><div class="wrap page-texte">
+    ${enTete("Informations", "Mentions légales", "")}
+    <h2>Éditeur du site</h2>
+    <ul>
+      <li>Providence Éditions Prestige, maison d'édition de ${esc(CFG.structure)} (${esc(CFG.pays)})</li>
+      ${I.adresseProfessionnelle ? `<li>Adresse : ${esc(I.adresseProfessionnelle)}</li>` : ""}${I.rccm ? `<li>RCCM : ${esc(I.rccm)}</li>` : ""}${I.ifu ? `<li>IFU : ${esc(I.ifu)}</li>` : ""}
+      <li>Responsable de la publication : Docteur B. Silas Gbavou, promoteur et directeur général</li>
+      <li>Contact : ${mail ? esc(mail) + ", " : ""}WhatsApp ${esc(contactWA().valeur)}</li>
+    </ul>
+    <h2>Hébergement</h2>
+    <p>GitHub Pages, service de GitHub, Inc., 88 Colin P. Kelly Jr. Street, San Francisco, CA 94107, États-Unis.</p>
+    <h2>Propriété intellectuelle</h2>
+    <p>Les textes, couvertures, visuels et vidéos de ce site appartiennent à leurs auteurs et à Providence Éditions Prestige. Toute reproduction sans autorisation écrite est interdite.</p>
+    <div class="liens-infos"><a class="btn btn-capsule btn-petit" href="#conditions">Conditions de vente</a><a class="btn btn-capsule btn-petit" href="#confidentialite">Confidentialité</a></div>
   </div></section>`;
 }
 function pageLivraison() {
@@ -850,7 +874,7 @@ function pageConfidentialite() {
       <li>Le site n'a pas de base de données : il ne reçoit ni votre nom, ni votre numéro, ni votre e-mail.</li>
     </ul>
     <h2>Quand vous réglez</h2>
-    <p>Le règlement s'effectue sur notre page de paiement sécurisée, qui traite seule vos données de paiement : ce site n'en reçoit aucune. Si vous écrivez sur WhatsApp, vous envoyez vous-même votre message.</p>
+    <p>Le règlement s'effectue sur notre page de paiement sécurisée, qui traite seule vos données de paiement : ce site n'en reçoit aucune. Elle vous demande vos nom, e-mail et téléphone, utilisés uniquement pour vous remettre le livre et vous envoyer la confirmation. Si vous écrivez sur WhatsApp, vous envoyez vous-même votre message.</p>
     <h2>Équivalences de devises</h2>
     <p>Pour afficher une équivalence en dollars, le site peut consulter un service public de taux de change. Aucune donnée personnelle n'est transmise.</p>
     <h2>Mesure d'audience</h2>
@@ -918,7 +942,7 @@ function pageAide() {
   return `<section class="faq" style="padding-top:clamp(28px,4vw,48px)"><div class="wrap" style="max-width:860px">
     ${enTete("Aide", "Questions fréquentes", "")}
     <div style="margin-top:24px">${faq().join("")}</div>
-    <div class="liens-infos"><a class="btn btn-capsule btn-petit" href="#livraison">Livraison et problèmes</a><a class="btn btn-capsule btn-petit" href="#conditions">Conditions de vente</a><a class="btn btn-capsule btn-petit" href="#confidentialite">Confidentialité</a><a class="btn btn-capsule btn-petit" href="#editeur">L'éditeur</a></div>
+    <div class="liens-infos"><a class="btn btn-capsule btn-petit" href="#livraison">Livraison et problèmes</a><a class="btn btn-capsule btn-petit" href="#conditions">Conditions de vente</a><a class="btn btn-capsule btn-petit" href="#confidentialite">Confidentialité</a><a class="btn btn-capsule btn-petit" href="#mentions">Mentions légales</a></div>
     <div style="margin-top:34px">${contacts()}</div>
     ${blocNouveautes()}
   </div></section>`;
@@ -997,7 +1021,7 @@ function router() {
   let html, nav = h, livre = null;
   if (h.startsWith("livre-")) { livre = LIVRES.find(x => x.slug === h.slice(6)); nav = "catalogue"; html = livre ? pageLivre(livre) : pageCatalogue(); }
   else if (h === "parcours") { html = pageAccueil(); nav = "accueil"; }
-  else html = ({ catalogue: pageCatalogue, commande: pageCommande, auteur: pageAuteur, aide: pageAide, videos: pageVideos, confirmation: pageCommande, contact: pageContact, editeur: pageEditeur, conditions: pageConditions, livraison: pageLivraison, confidentialite: pageConfidentialite }[h] || pageAccueil)();
+  else html = ({ catalogue: pageCatalogue, commande: pageCommande, auteur: pageAuteur, aide: pageAide, videos: pageVideos, confirmation: pageCommande, contact: pageContact, editeur: pageEditeur, conditions: pageConditions, mentions: pageMentions, livraison: pageLivraison, confidentialite: pageConfidentialite }[h] || pageAccueil)();
   if (nav === "confirmation") nav = "commande";
   if (!["accueil","catalogue","commande","auteur","aide","videos","editeur","contact"].includes(nav)) nav = ["conditions","livraison","confidentialite"].includes(nav) ? "aide" : "accueil";
   const lect = document.getElementById("lecteur");
@@ -1032,6 +1056,11 @@ function ouvrir(url, canal) {
   return true;
 }
 function enLigneActif() { const p = CFG.vente.paiementEnLigne || {}; return p.actif && p.verifie; }
+/* Affiche le bloc « Collections » du catalogue (les deux collections, leurs prix et leurs liens de paiement). */
+function allerCollections() {
+  const aller = () => { const c = $(".collection"); if (c) c.scrollIntoView({ behavior: reduit.matches ? "auto" : "smooth", block: "start" }); };
+  if (location.hash === "#catalogue") aller(); else { location.hash = "catalogue"; setTimeout(aller, 350); }
+}
 function procurer(id) {
   const lot = (CFG.vente.lots || []).find(L => L.id === id);
   if (lot) {
@@ -1041,6 +1070,7 @@ function procurer(id) {
   }
   if (id === "collection") {
     if (enLigneActif() && CFG.vente.lienCollection && ouvrir(CFG.vente.lienCollection, "paiement-collection")) { toast("Ouverture de la page de paiement sécurisée"); return; }
+    if (!CFG.vente.lienCollection && lotsCalcules().lots.length) { allerCollections(); return; }
     choisirCollection(); location.hash === "#commande" ? router() : (location.hash = "commande"); return;
   }
   const l = LIVRES.find(x => x.id === id); if (!l) return;
@@ -1135,7 +1165,7 @@ window.addEventListener("scroll", surDefilement, { passive: true }); surDefileme
 
 /* ---------- Chargement ---------- */
 vue.innerHTML = `<p class="chargement">Chargement de la bibliothèque…</p>`;
-Promise.all([fetch("data/livres.json?v=20261121j", { cache: "no-cache" }).then(r => r.json()), fetch("data/config.json?v=20261121j", { cache: "no-cache" }).then(r => r.json())])
+Promise.all([fetch("data/livres.json?v=20261121k", { cache: "no-cache" }).then(r => r.json()), fetch("data/config.json?v=20261121k", { cache: "no-cache" }).then(r => r.json())])
   .then(([l, c]) => {
     /* Tolérance aux fiches saisies depuis la plateforme de gestion */
     const sl = t => String(t || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
