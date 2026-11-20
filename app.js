@@ -485,108 +485,166 @@ function blocNouveautes() {
 }
 let filtre = "Tous", recherche = "";
 const normal = s => s.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "");
-/* Recherche : titre, thème, sujets traités, présentation et chapitres ; sans accents ; tous les mots demandés. */
+/* Catalogue : filtre par thème (la barre de recherche a été retirée). */
 const MOTS_VIDES = new Set(["de", "la", "le", "les", "du", "des", "et", "d", "l", "un", "une", "au", "aux", "en", "sur", "pour", "livre", "livres"]);
 const indexLivre = l => normal([l.titre, l.sous, l.theme, ...(l.auteurs || []), ...(l.motsCles || []), ...(l.cles || []), ...(l.description || []), ...(l.chapitres || [])].join(" ").replace(/[’']/g, " "));
-/* Index plein texte : mots réellement présents dans chaque livre (data/recherche.json, chargé à la première recherche). */
-const VIDES_IDX = new Set("alors aucun aussi autre autres avant avec avoir bien cela celle celles celui cette ceux chaque chez comme comment dans depuis donc dont elle elles encore entre etre fait faire leur leurs lors mais meme moins nous notre plus pour pourquoi quand quel quelle quelles quels sans selon sera ses sont sous tous tout toute toutes tres une vers vous votre vos etait etaient avait avaient peut peuvent ainsi apres cest quil quils dune aux des les est par pas que qui sur son ces mes tes nos lui eux ont ete".split(" "));
-let IDX = null, idxEnCours = null;
-function chargerIndex() {
-  if (IDX || idxEnCours) return idxEnCours;
-  idxEnCours = fetch("data/recherche.json?v=20261121g").then(r => r.json()).then(d => {
-    const pos = {}; d.livres.forEach((id, k) => { pos[id] = k; });
-    IDX = { pos, mots: d.mots || {}, paires: d.paires || {}, liste: Object.keys(d.mots || {}) };
-    if (recherche.trim() && $("#grille")) { $("#grille").innerHTML = grilleCatalogue(); $("#resultat").textContent = texteResultat(); }
-  }).catch(() => { idxEnCours = null; });
-  return idxEnCours;
-}
-const motsRequete = q => normal(q).replace(/[’'ʼ]/g, " ").split(/[^a-z0-9]+/).filter(m => m.length > 2 && !MOTS_VIDES.has(m) && !VIDES_IDX.has(m));
-/* Masque des livres contenant un terme : mot exact, puis mots commençant pareil (« ange » → « anges »), puis racine (« synthétique » → « synthèse »). */
-function masqueTexte(m) {
-  if (!IDX) return { exact: 0, proche: 0 };
-  const exact = IDX.mots[m] || 0;
-  let proche = 0;
-  if (m.length >= 4) for (const w of IDX.liste) if (w !== m && w.startsWith(m)) proche |= IDX.mots[w];
-  if (!exact && !proche && m.length >= 6) {
-    for (let n = m.length - 1; n >= 5 && !proche; n--) { const r = m.slice(0, n); for (const w of IDX.liste) if (w.startsWith(r)) proche |= IDX.mots[w]; }
-  }
-  return { exact, proche };
-}
-function scoreLivre(l, mots) {
-  const titre = normal([l.titre, l.sous].join(" ")), meta = normal([l.theme, ...(l.motsCles || []), ...(l.cles || []), ...(l.chapitres || []), ...(l.description || []), ...(l.auteurs || [])].join(" ").replace(/[’']/g, " "));
-  const bit = IDX && IDX.pos[l.id] !== undefined ? (1 << IDX.pos[l.id]) : 0;
-  let score = 0;
-  for (const m of mots) {
-    let s = 0;
-    if (titre.includes(m)) s += 20;
-    if (meta.includes(m)) s += 10;
-    if (bit) { const t = masqueTexte(m); if (t.exact & bit) s += 4; else if (t.proche & bit) s += 2; }
-    if (!s) return 0;
-    score += s;
-  }
-  if (IDX && bit) for (let k = 0; k + 1 < mots.length; k++) if ((IDX.paires[mots[k] + " " + mots[k + 1]] || 0) & bit) score += 12;
-  if (mots.length > 1 && normal([l.titre, l.sous, ...(l.motsCles || [])].join(" ")).includes(mots.join(" "))) score += 15;
-  return score;
-}
-function expression(l, mots) {
-  const meta = normal([l.titre, l.sous, l.theme, ...(l.motsCles || []), ...(l.cles || []), ...(l.chapitres || []), ...(l.description || [])].join(" ").replace(/[’']/g, " ")).replace(/[^a-z0-9]+/g, " ");
-  const cible = mots.join(" ");
-  if (meta.includes(cible)) return true;
-  const bit = IDX && IDX.pos[l.id] !== undefined ? (1 << IDX.pos[l.id]) : 0;
-  if (!bit) return false;
-  for (let k = 0; k + 1 < mots.length; k++) if (!((IDX.paires[mots[k] + " " + mots[k + 1]] || 0) & bit)) return false;
-  return true;
-}
-function listeFiltree() {
-  const mots = motsRequete(recherche.trim());
-  const base = LIVRES.filter(l => filtre === "Tous" || l.theme === filtre);
-  if (!mots.length) return base;
-  if (!IDX) chargerIndex();
-  let res = base.map(l => ({ l, s: scoreLivre(l, mots), e: expression(l, mots) })).filter(x => x.s > 0);
-  /* Expression de plusieurs mots (« sein d'Abraham ») : si des livres la contiennent telle quelle, on ne garde qu'eux. */
-  if (mots.length > 1 && res.some(x => x.e)) res = res.filter(x => x.e);
-  return res.sort((a, b) => b.s - a.s).map(x => x.l);
-}
-/* Sujets proposés : uniquement des sujets réellement traités par au moins un livre. */
-const SUJETS = ["onction", "mouvement prophétique", "prière", "intercession", "fin des temps", "fils de Dieu", "anges", "nuée des témoins", "royaume de Dieu", "délivrance", "Saint-Esprit", "cinq ministères", "ministère de la Parole", "présence de Dieu"];
-const sujetsUtiles = () => SUJETS.filter(t => { const m = normal(t).split(/[^a-z0-9]+/).filter(x => x.length > 1 && !MOTS_VIDES.has(x)); return LIVRES.some(l => m.every(x => indexLivre(l).includes(x))); });
+const listeFiltree = () => LIVRES.filter(l => filtre === "Tous" || l.theme === filtre);
 function grilleCatalogue() {
   const liste = listeFiltree();
-  return liste.length ? liste.map(l => carte(l, "h2")).join("") : `<p class="chapeau" style="grid-column:1/-1">Aucun livre ne correspond. <button class="btn btn-capsule btn-petit" type="button" data-reinit>Tout afficher</button></p>`;
+  return liste.length ? liste.map(l => carte(l, "h2")).join("") : `<p class="chapeau" style="grid-column:1/-1">Aucun livre dans ce thème. <button class="btn btn-capsule btn-petit" type="button" data-reinit>Tout afficher</button></p>`;
 }
-const texteResultat = () => { const n = listeFiltree().length; return `${n} ${n > 1 ? "livres" : "livre"}${recherche.trim() ? ` pour « ${recherche.trim()} »` : ""}${filtre !== "Tous" ? " · " + filtre : ""}`; };
-/* Assistant bibliothécaire : besoins du lecteur → livres qui traitent réellement ces sujets. */
+const texteResultat = () => { const n = listeFiltree().length; return `${n} ${n > 1 ? "livres" : "livre"}${filtre !== "Tous" ? " · " + filtre : ""}`; };
+
+/* Assistant bibliothécaire.
+   Chaque besoin réunit les mots de tous les jours qu'un lecteur emploie (« je n'arrive pas à prier », « attaques la nuit », « mon appel »)
+   et les livres qui traitent réellement ce sujet, du plus adapté au complément. Les explications affichées viennent des fiches des livres. */
 const BESOINS = [
-  { id: "priere", nom: "Grandir dans la prière", mots: ["priere", "intercession", "intercesseur"] },
-  { id: "prophetique", nom: "Comprendre le prophétique", mots: ["prophetique", "prophete", "prophetie"] },
-  { id: "onction", nom: "Recevoir et garder l'onction", mots: ["onction", "manteau", "oint"] },
-  { id: "identite", nom: "Connaître mon identité en Christ", mots: ["fils de dieu", "filiation", "heritage", "identite"] },
-  { id: "ministere", nom: "Servir dans le ministère", mots: ["ministere", "predication", "apotre"] },
-  { id: "fin", nom: "Comprendre la fin des temps", mots: ["fin des temps", "eschatologie", "enlevement"] },
-  { id: "delivrance", nom: "Délivrance et rédemption", mots: ["redemption", "delivrance", "autels"] },
-  { id: "royaume", nom: "Le Royaume et la puissance", mots: ["royaume", "puissance", "territoire"] },
-  { id: "esprit", nom: "Le Saint-Esprit et le surnaturel", mots: ["saint-esprit", "ruach", "surnaturel", "esprit"] },
-  { id: "presence", nom: "Les anges et le monde invisible", mots: ["anges", "nuee des temoins", "monde invisible"] }
+  { id: "priere", nom: "Grandir dans la prière", dit: "approfondir votre vie de prière",
+    mots: ["prier", "priere", "prie ", "intercession", "intercede", "jeune", "jeuner", "exauce", "reponse a mes prieres", "cieux fermes", "ciel ferme", "autel", "parfum", "langues", "veillee", "fardeau", "reveil", "combat spirituel", "pas de resultat"],
+    livres: ["06", "09", "10"] },
+  { id: "prophetique", nom: "Comprendre le prophétique", dit: "comprendre le prophétique et la voix de Dieu",
+    mots: ["prophet", "prophetie", "vision", "reve", "songe", "voix de dieu", "entendre dieu", "dieu me parle", "revelation", "discern", "voyant", "message de dieu"],
+    livres: ["08", "10", "01"] },
+  { id: "onction", nom: "Recevoir et garder l'onction", dit: "recevoir l'onction et la garder",
+    mots: ["onction", "oint", "huile", "manteau", "garder ce que dieu", "perdu le feu", "perdre la puissance", "tiede", "froid spirituel", "dons spirituels", "mes dons"],
+    livres: ["01", "04", "13"] },
+  { id: "coeur", nom: "Un cœur pur et sanctifié", dit: "purifier votre cœur et vivre dans la sainteté",
+    mots: ["coeur", "purete", "pur", "sanctif", "saintete", "caractere", "orgueil", "tentation", "consacr", "consecration"],
+    livres: ["01", "12"] },
+  { id: "identite", nom: "Mon identité en Christ", dit: "connaître votre identité et votre héritage en Christ",
+    mots: ["identite", "qui je suis", "fils de dieu", "enfant de dieu", "filiation", "heritage", "valeur", "nom nouveau", "lumiere", "position en christ", "autorite du croyant", "droits"],
+    livres: ["02", "12", "03"] },
+  { id: "salut", nom: "Bien comprendre mon salut", dit: "comprendre en profondeur votre salut",
+    mots: ["salut", "sauve", "converti", "nouveau croyant", "nouvelle naissance", "ne de nouveau", "debut", "commence", "croix", "sang de jesus", "pardon", "peche", "iniquite", "justification", "regeneration", "redemption"],
+    livres: ["03", "02"] },
+  { id: "delivrance", nom: "Délivrance et liberté", dit: "être délivré et marcher dans la liberté",
+    mots: ["delivr", "liberer", "liberte", "attaque", "sorcel", "envout", "malediction", "maudit", "generation", "ancetre", "lignee", "famille", "autels familiaux", "demon", "oppress", "cauchemar", "blocage", "bloque", "echec", "ame captive", "possede"],
+    livres: ["03", "10", "02"] },
+  { id: "puissance", nom: "Miracles et puissance de Dieu", dit: "voir la puissance de Dieu se manifester",
+    mots: ["miracle", "prodige", "signe", "guerison", "guerir", "malade", "puissance", "surnaturel", "manifestation", "royaume de dieu", "autorite"],
+    livres: ["04", "10", "02"] },
+  { id: "esprit", nom: "Le Saint-Esprit", dit: "mieux connaître le Saint-Esprit et son action",
+    mots: ["saint-esprit", "saint esprit", "esprit saint", "souffle", "ruach", "bapteme", "remplir", "rempli", "parler en langues", "dispensation"],
+    livres: ["10", "12", "06"] },
+  { id: "presence", nom: "La présence de Dieu", dit: "vivre dans la présence de Dieu",
+    mots: ["presence", "intimite", "proche de dieu", "temple", "gloire", "demeure", "adorer", "adoration", "louange", "sentir dieu", "communion", "loin de dieu", "eloigne de dieu", "sec spirituellement", "secheresse", "vide spirituel", "rallumer"],
+    livres: ["12", "09", "01"] },
+  { id: "invisible", nom: "Les anges et le monde invisible", dit: "comprendre les anges et le monde invisible",
+    mots: ["ange", "invisible", "nuee", "temoins", "mort", "defunt", "deces", "apres la mort", "au-dela", "paradis", "ciel", "cieux", "esprits", "armee celeste", "monde spirituel"],
+    livres: ["02", "04", "05"] },
+  { id: "fin", nom: "La fin des temps", dit: "comprendre la fin des temps et le retour du Christ",
+    mots: ["fin des temps", "fin du monde", "derniers jours", "apocalyp", "retour du christ", "retour de jesus", "enlevement", "eschat", "avenir", "antichrist", "epouse", "tribulation"],
+    livres: ["07", "02", "13"] },
+  { id: "appel", nom: "Mon appel et le ministère", dit: "discerner votre appel et servir Dieu",
+    mots: ["appel", "vocation", "appele", "servir", "serviteur", "ministere", "pasteur", "apotre", "evangeliste", "docteur", "eglise", "cinq ministeres", "responsable", "leader", "berger"],
+    livres: ["14", "13", "11"] },
+  { id: "parole", nom: "Prêcher et enseigner la Parole", dit: "prêcher et enseigner la Parole avec onction",
+    mots: ["precher", "predic", "enseign", "parole", "message", "sermon", "exhort", "bible", "etudier", "doctrine", "revelation"],
+    livres: ["13", "14", "08"] },
+  { id: "ville", nom: "Impacter ma ville et ma nation", dit: "impacter votre ville, votre nation et la société",
+    mots: ["ville", "nation", "pays", "territoire", "quartier", "influence", "societe", "politique", "gouvernement", "entreprise", "media", "education", "culture", "conquete", "evangelis", "babylone"],
+    livres: ["05", "04", "11"] },
+  { id: "soutien", nom: "Soutenir l'œuvre de Dieu", dit: "devenir partenaire de l'œuvre de Dieu",
+    mots: ["soutenir", "soutien", "partenaire", "partenariat", "donner", "offrande", "dime", "semer", "semence", "sacrifice", "aumone", "financer", "aider l oeuvre", "sponsor", "benir"],
+    livres: ["11", "06"] }
 ];
-let besoinChoisi = "";
-function recommandations(b) {
-  const B = BESOINS.find(x => x.id === b); if (!B) return [];
-  return LIVRES.map(l => {
-    const titre = normal([l.titre, l.sous].join(" ")), theme = normal(l.theme || ""), mc = (l.motsCles || []).map(normal), d = indexLivre(l);
-    const score = B.mots.reduce((s, m) => s + (titre.includes(m) ? 6 : 0) + (theme.includes(m) ? 3 : 0) + 2 * mc.filter(k => k.includes(m)).length + (d.split(m).length - 1 > 3 ? 1 : 0), 0);
-    return { l, score };
-  }).filter(x => x.score >= 3).sort((a, b) => b.score - a.score).slice(0, 3).map(x => x.l);
+const PROFILS = [
+  { id: "tout", nom: "Je veux toute la collection", mots: ["tout", "toute la collection", "tous les livres", "collection complete", "les 14", "tous"] },
+  { id: "offrir", nom: "Offrir un livre", mots: ["offrir", "cadeau", "anniversaire", "pour mon pasteur", "pour un ami", "pour ma femme", "pour mon mari"] }
+];
+let besoinChoisi = "", texteAssistant = "";
+const prep = t => " " + normal(t || "").replace(/[’'ʼ]/g, " ").replace(/[^a-z0-9-]+/g, " ").replace(/\s+/g, " ") + " ";
+const touche = (t, m) => m.endsWith(" ") ? t.includes(" " + m) : t.includes(" " + m) || (m.length >= 5 && t.includes(m));
+const livreDispo = id => LIVRES.find(l => l.id === id);
+/* Compréhension d'une phrase libre : besoins reconnus puis livres classés. */
+function comprendre(phrase) {
+  const t = prep(phrase);
+  const besoins = BESOINS.map(b => ({ b, n: b.mots.filter(m => touche(t, m)).length })).filter(x => x.n).sort((a, b) => b.n - a.n);
+  const profil = PROFILS.find(p => p.mots.some(m => t.includes(" " + m + " ")));
+  const score = {};
+  besoins.forEach(({ b, n }, rang) => b.livres.forEach((id, k) => { score[id] = (score[id] || 0) + n * (3 - k) * (rang ? 0.6 : 1); }));
+  LIVRES.forEach(l => {
+    if (t.includes(prep(l.titre).trim())) score[l.id] = (score[l.id] || 0) + 20;
+    (l.motsCles || []).forEach(k => { const p = prep(k).trim(); if (p.length > 4 && t.includes(" " + p + " ")) score[l.id] = (score[l.id] || 0) + 2; });
+  });
+  const livres = Object.entries(score).filter(([id]) => livreDispo(id)).sort((a, b) => b[1] - a[1]).map(([id]) => livreDispo(id));
+  return { besoins: besoins.slice(0, 2).map(x => x.b), livres: livres.slice(0, 3), profil };
+}
+function lotDe(ids) { return lotsCalcules().lots.find(L => ids.every(id => L.livres.some(x => x.id === id))); }
+function propositionCollection(reco) {
+  const { lots, total, ensemble } = lotsCalcules();
+  if (!lots.length) return "";
+  const somme = reco.reduce((s, l) => s + (l.prix || 0), 0);
+  const lot = reco.length > 1 ? lotDe(reco.map(l => l.id)) : null;
+  const ligneLot = lot ? `<div class="aide-offre"><div><b>${esc(lot.nom)}</b><span>Ces ${reco.length} ouvrages en font partie, avec ${lot.livres.length - reco.length} autres : ${lot.livres.length} livres pour ${px(lot.prix)} au lieu de ${px(lot.valeur)}.</span></div><button type="button" class="btn btn-contour btn-petit" data-procurer="${lot.id}">Choisir ce pack</button></div>` : "";
+  return `<div class="aide-plus">
+    <p class="aide-plus-titre">Pour aller plus loin</p>
+    ${ligneLot}
+    <div class="aide-offre"><div><b>La collection complète</b><span>Les ${LIVRES.length} ouvrages du Docteur B. Silas Gbavou pour ${px(ensemble)} au lieu de ${px(total)}${somme ? ` (les ouvrages conseillés ci-dessus valent à eux seuls ${px(somme)})` : ""}.</span></div><button type="button" class="btn btn-principal btn-petit" data-procurer="collection">Choisir la collection</button></div>
+  </div>`;
+}
+function ficheConseil(l, rang) {
+  const cles = (l.cles || []).slice(0, rang ? 2 : 3);
+  return `<li class="aide-livre${rang ? "" : " aide-premier"}">
+    <a class="aide-couv" href="#livre-${l.slug}" aria-label="Découvrir ${esc(l.titre)}"><img src="${mini(l)}" alt="" width="420" height="595" loading="lazy"></a>
+    <div class="aide-corps">
+      <small>${rang ? "Pour compléter" : "Notre premier conseil"}</small>
+      <b><a href="#livre-${l.slug}">${esc(l.titre)}</a></b>
+      ${l.pour ? `<p class="aide-pour"><span>Pour qui :</span> ${esc(l.pour)}</p>` : ""}
+      ${cles.length ? `<p class="aide-trouve">Vous y découvrirez :</p><ul>${cles.map(c => `<li>${esc(c)}</li>`).join("")}</ul>` : ""}
+      <div class="aide-pied"><span class="num">${l.pages ? l.pages + " pages · PDF" : "PDF"}${l.prix ? " · " : ""}</span>${l.prix ? px(l.prix) : ""}</div>
+      <div class="aide-actions"><button type="button" class="btn btn-principal btn-petit" data-procurer="${l.id}">Se procurer ce livre</button><a class="btn btn-capsule btn-petit" href="#livre-${l.slug}">Voir le livre</a></div>
+    </div></li>`;
+}
+function reponseAssistant() {
+  let reco = [], intro = "", profil = null;
+  if (besoinChoisi) {
+    const B = BESOINS.find(x => x.id === besoinChoisi);
+    if (B) { reco = B.livres.map(livreDispo).filter(Boolean); intro = `Pour ${B.dit}, voici ce que nous vous conseillons :`; }
+  } else if (texteAssistant.trim()) {
+    const c = comprendre(texteAssistant); reco = c.livres; profil = c.profil;
+    if (c.besoins.length) intro = `Nous avons compris que vous souhaitez ${c.besoins.map(b => b.dit).join(", et aussi ")}. Voici nos conseils :`;
+    else if (reco.length) intro = "Voici les ouvrages qui répondent le mieux à votre demande :";
+    if (profil && profil.id === "offrir" && reco.length) intro = "Pour votre cadeau, voici les ouvrages qui conviennent le mieux :";
+  }
+  if (profil && profil.id === "tout") return `<p class="assistant-intro">Vous souhaitez lire tout l'enseignement du Docteur B. Silas Gbavou : la collection complète est la meilleure solution.</p>${propositionCollection([])}`;
+  if (profil && profil.id === "offrir" && !reco.length) return `<p class="assistant-intro">Pour offrir, dites-nous en quelques mots à qui (un pasteur, un jeune croyant, un intercesseur…) ou choisissez un besoin ci-dessus. Vous pouvez aussi offrir la collection complète :</p>${propositionCollection([])}`;
+  if (!reco.length && texteAssistant.trim()) return `<div class="aide-vide"><p>Nous n'avons pas encore bien saisi votre demande. Essayez avec d'autres mots, par exemple « je n'arrive pas à prier » ou « je veux comprendre mon appel », ou choisissez un besoin ci-dessus.</p><a class="btn btn-wa btn-petit" target="_blank" rel="noopener" data-sortie="assistant" href="${lienAssistance("je cherche un livre qui parle de : " + texteAssistant.trim().slice(0, 200))}">${IC.wa}Demander conseil sur WhatsApp</a></div>`;
+  if (!reco.length) return "";
+  return `<p class="assistant-intro">${esc(intro)}</p>
+    <ol class="aide-liste">${reco.map(ficheConseil).join("")}</ol>
+    ${propositionCollection(reco)}
+    <p class="aide-whatsapp">Une question avant de choisir ? <a target="_blank" rel="noopener" data-sortie="assistant" href="${lienAssistance("j'aimerais un conseil pour choisir un de vos livres" + (texteAssistant.trim() ? " : " + texteAssistant.trim().slice(0, 200) : besoinChoisi ? " (" + BESOINS.find(x => x.id === besoinChoisi).nom + ")" : "") + ".")}">Écrivez-nous sur WhatsApp</a>.</p>`;
 }
 function blocAssistant() {
-  const reco = recommandations(besoinChoisi);
-  const pourquoi = l => { const d = (l.description || [])[0] || ""; const p = d.split(/(?<=[.!?])\s/)[0]; return p.length > 210 ? p.slice(0, 207).replace(/\s\S*$/, "") + "…" : p; };
   return `<aside class="assistant" aria-labelledby="assistant-titre">
-    <div class="assistant-tete"><span class="assistant-ico" aria-hidden="true">${IC.livreOuvert || ""}</span><div><h2 id="assistant-titre">Assistant bibliothécaire</h2><p>Dites-nous ce que vous cherchez : nous vous indiquons les ouvrages qui traitent réellement ce sujet.</p></div></div>
-    <div class="besoins" role="group" aria-label="Ce que vous cherchez">${BESOINS.filter(b => recommandations(b.id).length).map(b => `<button type="button" class="besoin" data-besoin="${b.id}" aria-pressed="${b.id === besoinChoisi}">${esc(b.nom)}</button>`).join("")}</div>
-    <div class="assistant-reponse" id="assistant-reponse" aria-live="polite">${reco.length ? `<p class="assistant-intro">${reco.length > 1 ? "Ouvrages conseillés" : "Ouvrage conseillé"} pour « ${esc(BESOINS.find(x => x.id === besoinChoisi).nom)} » :</p>
-      <ol class="reco-assistant">${reco.map((l, i) => `<li><a href="#livre-${l.slug}"><img src="${mini(l)}" alt="" width="420" height="595" loading="lazy"><span><small>${i ? "Également" : "Notre premier conseil"}</small><b>${esc(l.titre)}</b><em>${esc(pourquoi(l))}</em><span class="reco-prix num">${l.prix ? px(l.prix) : ""}</span></span></a></li>`).join("")}</ol>` : ""}</div>
+    <div class="assistant-tete"><span class="assistant-ico" aria-hidden="true">${IC.livreOuvert || ""}</span><div><h2 id="assistant-titre">Assistant bibliothécaire</h2><p>Dites-nous, avec vos propres mots, ce que vous vivez ou ce que vous cherchez. Nous vous indiquons les ouvrages qui y répondent.</p></div></div>
+    <form class="aide-form" id="aide-form" autocomplete="off">
+      <label class="sr" for="aide-q">Votre besoin, avec vos mots</label>
+      <textarea id="aide-q" rows="2" maxlength="300" enterkeyhint="send" placeholder="Exemple : je prie mais je ne vois pas de résultat ; je veux comprendre mon appel ; nous subissons des attaques dans la famille…">${esc(texteAssistant)}</textarea>
+      <button type="submit" class="btn btn-principal">Me conseiller</button>
+    </form>
+    <p class="aide-ou">Ou choisissez un besoin :</p>
+    <div class="besoins" role="group" aria-label="Ce que vous cherchez">${BESOINS.map(b => `<button type="button" class="besoin" data-besoin="${b.id}" aria-pressed="${b.id === besoinChoisi}">${esc(b.nom)}</button>`).join("")}<button type="button" class="besoin" data-besoin="tout" aria-pressed="false">Toute la collection</button></div>
+    <div class="assistant-reponse" id="assistant-reponse" aria-live="polite">${reponseAssistant()}</div>
   </aside>`;
 }
+function majAssistant(defiler) {
+  const r = $("#assistant-reponse"); if (!r) return;
+  r.innerHTML = reponseAssistant();
+  $$(".besoin").forEach(b => b.setAttribute("aria-pressed", b.dataset.besoin === besoinChoisi));
+  if (defiler && r.firstElementChild) r.scrollIntoView({ block: "start", behavior: reduit.matches ? "auto" : "smooth" });
+}
+document.addEventListener("submit", e => {
+  if (e.target.id !== "aide-form") return;
+  e.preventDefault();
+  const q = $("#aide-q"); texteAssistant = q ? q.value : ""; besoinChoisi = "";
+  if (texteAssistant.trim()) mesure("assistant");
+  majAssistant(true); if (q) q.blur();
+});
+document.addEventListener("keydown", e => {
+  if (e.target.id === "aide-q" && e.key === "Enter" && !e.shiftKey) { e.preventDefault(); e.target.form.requestSubmit ? e.target.form.requestSubmit() : e.target.form.dispatchEvent(new Event("submit", { cancelable: true, bubbles: true })); }
+});
 function pageCatalogue() {
   return `<section style="padding-top:clamp(28px,4vw,48px)"><div class="wrap">
     <div class="section-tete"><div>${enTete("La librairie", `Les ouvrages du <span class="b">Docteur B. Silas Gbavou</span>`, "Doctrine, prophétie, prière, Royaume et ministère : parcourez la librairie, puis touchez une couverture pour découvrir l'ouvrage.")}</div></div>
@@ -595,12 +653,10 @@ function pageCatalogue() {
   <section style="padding-top:clamp(20px,3vw,32px)"><div class="wrap">
     ${blocAssistant()}
     <div class="outils">
-      <div class="recherche">${IC.loupe}<label class="sr" for="q">Rechercher un livre</label><input id="q" type="search" placeholder="Titre, sujet ou question : onction, anges, fin des temps…" value="${esc(recherche)}" autocomplete="off" enterkeyhint="search"></div>
       <div class="filtres" role="group" aria-label="Filtrer par thème">
         ${["Tous", ...THEMES].map(t => `<button class="filtre" type="button" data-filtre="${esc(t)}" aria-pressed="${t === filtre}">${esc(t)}</button>`).join("")}
       </div>
     </div>
-    <div class="sujets" role="group" aria-label="Sujets fréquents"><span class="sujets-titre">Sujets :</span>${sujetsUtiles().map(t => `<button type="button" class="sujet" data-sujet="${esc(t)}" aria-pressed="${normal(recherche.trim()) === normal(t)}">${esc(t)}</button>`).join("")}</div>
     <p class="resultat" id="resultat" aria-live="polite">${esc(texteResultat())}</p>
     <div class="grille" id="grille">${grilleCatalogue()}</div>
   </div></section>
@@ -971,10 +1027,8 @@ document.addEventListener("click", e => {
   const df = e.target.closest("[data-defile]");
   if (df) { e.preventDefault(); const c = document.getElementById(df.dataset.defile); if (c) { c.scrollIntoView({ behavior: reduit.matches ? "auto" : "smooth" }); const h = $("h2", c); if (h) { h.setAttribute("tabindex", "-1"); h.focus({ preventScroll: true }); } } return; }
   if (e.target.closest("[data-haut]")) { window.scrollTo({ top: 0, behavior: reduit.matches ? "auto" : "smooth" }); return; }
-  const sj = e.target.closest("[data-sujet]");
-  if (sj) { const v = normal(recherche.trim()) === normal(sj.dataset.sujet) ? "" : sj.dataset.sujet; recherche = v; const q = $("#q"); if (q) q.value = v; $$(".sujet").forEach(b => b.setAttribute("aria-pressed", normal(b.dataset.sujet) === normal(v) && !!v)); $("#grille").innerHTML = grilleCatalogue(); $("#resultat").textContent = texteResultat(); return; }
   const bs = e.target.closest("[data-besoin]");
-  if (bs) { besoinChoisi = besoinChoisi === bs.dataset.besoin ? "" : bs.dataset.besoin; const a = $(".assistant"); if (a) { a.outerHTML = blocAssistant(); const r = $("#assistant-reponse"); if (r && besoinChoisi && r.firstElementChild) r.scrollIntoView({ block: "nearest", behavior: reduit.matches ? "auto" : "smooth" }); } return; }
+  if (bs) { const v = bs.dataset.besoin; if (v === "tout") { besoinChoisi = ""; texteAssistant = "toute la collection"; const q = $("#aide-q"); if (q) q.value = ""; } else { besoinChoisi = besoinChoisi === v ? "" : v; texteAssistant = ""; const q = $("#aide-q"); if (q) q.value = ""; } majAssistant(!!(besoinChoisi || texteAssistant)); if (v === "tout") texteAssistant = ""; return; }
   const pr = e.target.closest("[data-procurer]");
   if (pr) { procurer(pr.dataset.procurer); return; }
   const dv = e.target.closest("button[data-devise]");
@@ -1038,7 +1092,6 @@ document.addEventListener("click", e => {
   }
 });
 document.addEventListener("input", e => {
-  if (e.target.id === "q") { chargerIndex(); recherche = e.target.value; $("#grille").innerHTML = grilleCatalogue(); $("#resultat").textContent = texteResultat(); $$(".sujet").forEach(b => b.setAttribute("aria-pressed", !!recherche.trim() && normal(b.dataset.sujet) === normal(recherche.trim()))); }
 });
 /* Le dock se retire pendant la saisie (clavier ouvert) pour ne pas masquer les champs */
 document.addEventListener("focusin", e => { if (e.target.matches("input,select,textarea")) $(".barre-mobile").classList.add("masque"); });
@@ -1052,7 +1105,7 @@ window.addEventListener("scroll", surDefilement, { passive: true }); surDefileme
 
 /* ---------- Chargement ---------- */
 vue.innerHTML = `<p class="chargement">Chargement de la bibliothèque…</p>`;
-Promise.all([fetch("data/livres.json?v=20261121g", { cache: "no-cache" }).then(r => r.json()), fetch("data/config.json?v=20261121g", { cache: "no-cache" }).then(r => r.json())])
+Promise.all([fetch("data/livres.json?v=20261121h", { cache: "no-cache" }).then(r => r.json()), fetch("data/config.json?v=20261121h", { cache: "no-cache" }).then(r => r.json())])
   .then(([l, c]) => {
     /* Tolérance aux fiches saisies depuis la plateforme de gestion */
     const sl = t => String(t || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");

@@ -780,12 +780,6 @@ main h1,main h2,main h3,.btn,.prix,.num{hyphens:manual}
 /* ===== Prestige 2.0 : recherche, assistant, aperçu ===== */
 .recherche input{transition:border-color var(--t-moyen) ease,box-shadow var(--t-moyen) ease}
 .recherche input:focus{border-color:var(--action);box-shadow:0 0 0 4px rgba(24,80,208,.12),0 10px 24px -14px rgba(18,56,168,.45);outline:0}
-.sujets{display:flex;gap:8px;align-items:center;overflow-x:auto;padding:12px 2px 4px;scrollbar-width:none;-webkit-mask-image:linear-gradient(90deg,#000 92%,transparent);mask-image:linear-gradient(90deg,#000 92%,transparent)}
-.sujets::-webkit-scrollbar{display:none}
-.sujets-titre{flex:none;font-size:12.5px;font-weight:700;color:var(--texte-2);letter-spacing:.02em}
-.sujet{flex:none;min-height:36px;padding:6px 13px;border-radius:var(--r-pill);border:1px dashed rgba(24,80,208,.35);background:var(--fond);color:var(--action);font:600 13.5px "Plus Jakarta Sans",system-ui,sans-serif;cursor:pointer;transition:background-color var(--t-moyen) ease,color var(--t-moyen) ease,border-color var(--t-moyen) ease}
-.sujet:hover{border-style:solid}
-.sujet[aria-pressed=true]{background:var(--action);color:#fff;border:1px solid var(--action)}
 .assistant{margin:0 0 22px;padding:20px;border-radius:24px;background:linear-gradient(160deg,#fff 0%,#F2F7FF 100%);border:1px solid var(--filet);box-shadow:var(--ombre)}
 .assistant-tete{display:flex;gap:14px;align-items:flex-start}
 .assistant-ico{flex:none;width:46px;height:46px;border-radius:14px;display:grid;place-items:center;color:#fff;background:linear-gradient(150deg,#3D7BFF,#1238A8);box-shadow:0 8px 18px -8px rgba(18,56,168,.6)}
@@ -807,12 +801,49 @@ main h1,main h2,main h3,.btn,.prix,.num{hyphens:manual}
 .reco-assistant em{display:block;font-style:normal;font-size:13px;color:var(--texte-2);line-height:1.45}
 .reco-prix{display:block;margin-top:6px;font-weight:800;font-size:14px;color:var(--action)}
 @media (prefers-reduced-motion:reduce){.reco-assistant a{animation:none}.besoin:hover,.reco-assistant a:hover{transform:none}}
-.sujets{padding-top:4px;margin-top:-6px}
 @media(max-width:699px){
   .assistant{padding:16px}
   .besoins{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;margin:14px -16px 0;padding:0 16px 4px;-webkit-mask-image:linear-gradient(90deg,#000 90%,transparent);mask-image:linear-gradient(90deg,#000 90%,transparent)}
   .besoins::-webkit-scrollbar{display:none}
   .besoin{flex:none}
 }
-.reco-assistant em{display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+
 .assistant p,.assistant-intro,.reco-assistant em{text-align:left}
+
+/* Assistant bibliothécaire enrichi */
+.aide-form{display:flex;gap:10px;align-items:stretch;margin-top:16px}
+.aide-form textarea{flex:1;min-height:52px;resize:vertical;padding:12px 14px;border-radius:16px;border:1.5px solid var(--filet);background:#fff;color:var(--texte);font:500 15px/1.45 "Plus Jakarta Sans",system-ui,sans-serif}
+.aide-form textarea:focus{outline:none;border-color:var(--action);box-shadow:0 0 0 4px rgba(61,123,255,.15)}
+.aide-form .btn{flex:none;align-self:stretch}
+.aide-ou{margin:14px 0 0;font-size:13.5px;font-weight:700;color:var(--texte-2)}
+.assistant .besoins{margin-top:8px}
+.aide-liste{list-style:none;margin:0;padding:0;display:grid;gap:12px}
+.aide-livre{display:flex;gap:14px;align-items:flex-start;padding:14px;border-radius:18px;background:#fff;border:1px solid var(--filet);animation:aideEntre .45s ease both}
+.aide-livre+.aide-livre{animation-delay:.08s}
+.aide-premier{border-color:rgba(61,123,255,.45);box-shadow:0 16px 30px -20px rgba(18,56,168,.55)}
+.aide-couv{flex:none}
+.aide-couv img{display:block;width:86px;height:auto;aspect-ratio:800/1133;object-fit:cover;border-radius:2px 7px 7px 2px;box-shadow:0 10px 18px -8px rgba(0,0,40,.5)}
+.aide-premier .aide-couv img{width:104px}
+.aide-corps{min-width:0;flex:1}
+.aide-corps small{display:block;font-size:11.5px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--action)}
+.aide-corps>b{display:block;font-size:16px;line-height:1.3;margin:3px 0 6px}
+.aide-corps>b a{color:inherit;text-decoration:none}
+.aide-pour{margin:0 0 6px;font-size:13.5px;line-height:1.5;color:var(--texte-2);text-align:left}
+.aide-pour span,.aide-trouve{font-weight:700;color:var(--texte)}
+.aide-trouve{margin:0 0 2px;font-size:13.5px;text-align:left}
+.aide-corps ul{margin:0 0 8px;padding-left:18px;font-size:13.5px;line-height:1.5;color:var(--texte-2);text-align:left}
+.aide-pied{font-size:14px;font-weight:700;margin-bottom:10px}
+.aide-actions{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.aide-actions .btn{min-height:42px}
+.aide-plus{margin-top:14px;padding:14px;border-radius:18px;background:#EEF4FF;border:1px dashed rgba(61,123,255,.45);display:grid;gap:10px}
+.aide-plus-titre{margin:0;font-size:12px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--action)}
+.aide-offre{display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap}
+.aide-offre div{flex:1;min-width:220px}
+.aide-offre b{display:block;font-size:15px}
+.aide-offre div>span{display:block;font-size:13.5px;line-height:1.5;color:var(--texte-2);text-align:left}
+.aide-whatsapp{margin:12px 0 0;font-size:13.5px;color:var(--texte-2);text-align:left}
+.aide-vide{margin-top:16px;display:grid;gap:10px;justify-items:start}
+.aide-vide p{margin:0;font-size:14px;color:var(--texte-2);text-align:left}
+@keyframes aideEntre{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+@media (prefers-reduced-motion:reduce){.aide-livre{animation:none}}
+@media (max-width:640px){.aide-form{flex-direction:column}.aide-couv img,.aide-premier .aide-couv img{width:72px}.aide-livre{padding:12px;gap:12px}}
