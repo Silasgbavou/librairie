@@ -499,9 +499,15 @@ const texteResultat = () => { const n = listeFiltree().length; return `${n} ${n 
    Chaque besoin réunit les mots de tous les jours qu'un lecteur emploie (« je n'arrive pas à prier », « attaques la nuit », « mon appel »)
    et les livres qui traitent réellement ce sujet, du plus adapté au complément. Les explications affichées viennent des fiches des livres. */
 const BESOINS = [
-  { id: "priere", nom: "Grandir dans la prière", dit: "approfondir votre vie de prière",
-    mots: ["prier", "priere", "prie ", "intercession", "intercede", "jeune", "jeuner", "exauce", "reponse a mes prieres", "cieux fermes", "ciel ferme", "autel", "parfum", "langues", "veillee", "fardeau", "reveil", "combat spirituel", "pas de resultat"],
-    livres: ["06", "09", "10"] },
+  /* Deux prières bien distinctes :
+     — la prière personnelle d'ascension spirituelle, par la pratique des lois de l'esprit (Les Fondements légaux de la Prière) ;
+     — l'intercession qui engendre et active les mouvements de Dieu, libère les distorsions et crée l'atmosphère spirituelle (La Prière qui engendre les Mouvements de Dieu). */
+  { id: "priere", nom: "Ma vie de prière personnelle", dit: "faire grandir votre vie de prière personnelle par les lois spirituelles du règne de l'esprit",
+    mots: ["comment prier", "apprendre a prier", "mieux prier", "prier efficacement", "prier avec efficacite", "n arrive pas a prier", "arrive pas a prier", "ma priere", "mes prieres", "vie de priere", "prieres ne sont pas exaucees", "pas exauce", "exauce", "reponse a mes prieres", "pas de resultat", "rien ne change", "grandir", "croissance", "monter", "ascension", "elever", "progresser", "niveau spirituel", "lois spirituelles", "loi ", "lois ", "principes", "regles", "semence", "semer", "sacrifice", "aumone", "parfum", "odeur", "autel", "feu spirituel", "langues", "parlement", "cieux fermes", "ciel ferme", "jeune", "jeuner", "veillee"],
+    livres: ["06", "10", "12"] },
+  { id: "intercession", nom: "Intercession et mouvements de Dieu", dit: "intercéder pour engendrer et activer les mouvements de Dieu dans une atmosphère spirituelle",
+    mots: ["intercession", "interceder", "intercede", "intercesseur", "prier pour", "prier en faveur", "porter dans la priere", "fardeau", "enfanter", "enfantement", "engendrer", "mouvement de dieu", "mouvements de dieu", "nouveau mouvement", "reveil", "atmosphere", "climat spirituel", "distorsion", "debloquer", "ouvrir les cieux", "gloire", "visitation", "deplacement de dieu", "manifester dieu", "chaine de priere", "groupe de priere", "cellule de priere", "veiller pour"],
+    livres: ["09", "11", "08"] },
   { id: "prophetique", nom: "Comprendre le prophétique", dit: "comprendre le prophétique et la voix de Dieu",
     mots: ["prophet", "prophetie", "vision", "reve", "songe", "voix de dieu", "entendre dieu", "dieu me parle", "revelation", "discern", "voyant", "message de dieu"],
     livres: ["08", "10", "01"] },
@@ -567,6 +573,10 @@ function comprendre(phrase) {
     if (t.includes(prep(l.titre).trim())) score[l.id] = (score[l.id] || 0) + 20;
     (l.motsCles || []).forEach(k => { const p = prep(k).trim(); if (p.length > 4 && t.includes(" " + p + " ")) score[l.id] = (score[l.id] || 0) + 2; });
   });
+  /* « Prière » sans précision : on présente les deux livres de prière, chacun pour ce qu'il traite. */
+  if (/ (prier|priere|prieres|prie) /.test(t) && !besoins.some(x => x.b.id === "priere" || x.b.id === "intercession")) {
+    score["06"] = (score["06"] || 0) + 6; score["09"] = (score["09"] || 0) + 5; besoins.unshift({ b: { dit: "approfondir la prière (prière personnelle ou intercession)" }, n: 1 });
+  }
   const livres = Object.entries(score).filter(([id]) => livreDispo(id)).sort((a, b) => b[1] - a[1]).map(([id]) => livreDispo(id));
   return { besoins: besoins.slice(0, 2).map(x => x.b), livres: livres.slice(0, 3), profil };
 }
@@ -588,7 +598,7 @@ function ficheConseil(l, rang) {
   return `<li class="aide-livre${rang ? "" : " aide-premier"}">
     <a class="aide-couv" href="#livre-${l.slug}" aria-label="Découvrir ${esc(l.titre)}"><img src="${mini(l)}" alt="" width="420" height="595" loading="lazy"></a>
     <div class="aide-corps">
-      <small>${rang ? "Pour compléter" : "Notre premier conseil"}</small>
+      <small>${rang ? "Lecture complémentaire" : "Ouvrage recommandé"}</small>
       <b><a href="#livre-${l.slug}">${esc(l.titre)}</a></b>
       ${l.pour ? `<p class="aide-pour"><span>Pour qui :</span> ${esc(l.pour)}</p>` : ""}
       ${cles.length ? `<p class="aide-trouve">Vous y découvrirez :</p><ul>${cles.map(c => `<li>${esc(c)}</li>`).join("")}</ul>` : ""}
@@ -600,12 +610,12 @@ function reponseAssistant() {
   let reco = [], intro = "", profil = null;
   if (besoinChoisi) {
     const B = BESOINS.find(x => x.id === besoinChoisi);
-    if (B) { reco = B.livres.map(livreDispo).filter(Boolean); intro = `Pour ${B.dit}, voici ce que nous vous conseillons :`; }
+    if (B) { reco = B.livres.map(livreDispo).filter(Boolean); intro = `Ouvrages recommandés pour ${B.dit} :`; }
   } else if (texteAssistant.trim()) {
     const c = comprendre(texteAssistant); reco = c.livres; profil = c.profil;
-    if (c.besoins.length) intro = `Nous avons compris que vous souhaitez ${c.besoins.map(b => b.dit).join(", et aussi ")}. Voici nos conseils :`;
+    if (c.besoins.length) intro = `Besoin identifié : ${c.besoins.map(b => b.dit).join(", et aussi ")}. Voici les ouvrages qui y répondent :`;
     else if (reco.length) intro = "Voici les ouvrages qui répondent le mieux à votre demande :";
-    if (profil && profil.id === "offrir" && reco.length) intro = "Pour votre cadeau, voici les ouvrages qui conviennent le mieux :";
+    if (profil && profil.id === "offrir" && reco.length) intro = "Ouvrages recommandés pour votre cadeau :";
   }
   if (profil && profil.id === "tout") return `<p class="assistant-intro">Vous souhaitez lire tout l'enseignement du Docteur B. Silas Gbavou : la collection complète est la meilleure solution.</p>${propositionCollection([])}`;
   if (profil && profil.id === "offrir" && !reco.length) return `<p class="assistant-intro">Pour offrir, dites-nous en quelques mots à qui (un pasteur, un jeune croyant, un intercesseur…) ou choisissez un besoin ci-dessus. Vous pouvez aussi offrir la collection complète :</p>${propositionCollection([])}`;
@@ -618,13 +628,13 @@ function reponseAssistant() {
 }
 function blocAssistant() {
   return `<aside class="assistant" aria-labelledby="assistant-titre">
-    <div class="assistant-tete"><span class="assistant-ico" aria-hidden="true">${IC.livreOuvert || ""}</span><div><h2 id="assistant-titre">Assistant bibliothécaire</h2><p>Dites-nous, avec vos propres mots, ce que vous vivez ou ce que vous cherchez. Nous vous indiquons les ouvrages qui y répondent.</p></div></div>
+    <div class="assistant-tete"><span class="assistant-ico" aria-hidden="true">${IC.livreOuvert || ""}</span><div><h2 id="assistant-titre">Assistant bibliothécaire</h2><p>Décrivez votre besoin avec vos propres mots : l'assistant identifie le sujet et sélectionne dans la librairie les ouvrages à acquérir qui y répondent.</p></div></div>
     <form class="aide-form" id="aide-form" autocomplete="off">
       <label class="sr" for="aide-q">Votre besoin, avec vos mots</label>
-      <textarea id="aide-q" rows="2" maxlength="300" enterkeyhint="send" placeholder="Exemple : je prie mais je ne vois pas de résultat ; je veux comprendre mon appel ; nous subissons des attaques dans la famille…">${esc(texteAssistant)}</textarea>
-      <button type="submit" class="btn btn-principal">Me conseiller</button>
+      <textarea id="aide-q" rows="2" maxlength="300" enterkeyhint="send" placeholder="Exemple : je veux apprendre à prier efficacement ; je porte un fardeau d'intercession pour ma ville ; je veux comprendre mon appel…">${esc(texteAssistant)}</textarea>
+      <button type="submit" class="btn btn-principal">Trouver mes ouvrages</button>
     </form>
-    <p class="aide-ou">Ou choisissez un besoin :</p>
+    <p class="aide-ou">Ou sélectionnez un besoin :</p>
     <div class="besoins" role="group" aria-label="Ce que vous cherchez">${BESOINS.map(b => `<button type="button" class="besoin" data-besoin="${b.id}" aria-pressed="${b.id === besoinChoisi}">${esc(b.nom)}</button>`).join("")}<button type="button" class="besoin" data-besoin="tout" aria-pressed="false">Toute la collection</button></div>
     <div class="assistant-reponse" id="assistant-reponse" aria-live="polite">${reponseAssistant()}</div>
   </aside>`;
@@ -1105,7 +1115,7 @@ window.addEventListener("scroll", surDefilement, { passive: true }); surDefileme
 
 /* ---------- Chargement ---------- */
 vue.innerHTML = `<p class="chargement">Chargement de la bibliothèque…</p>`;
-Promise.all([fetch("data/livres.json?v=20261121h", { cache: "no-cache" }).then(r => r.json()), fetch("data/config.json?v=20261121h", { cache: "no-cache" }).then(r => r.json())])
+Promise.all([fetch("data/livres.json?v=20261121i", { cache: "no-cache" }).then(r => r.json()), fetch("data/config.json?v=20261121i", { cache: "no-cache" }).then(r => r.json())])
   .then(([l, c]) => {
     /* Tolérance aux fiches saisies depuis la plateforme de gestion */
     const sl = t => String(t || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
