@@ -10,7 +10,14 @@ const $$ = (s, r = document) => [...r.querySelectorAll(s)];
 const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const fcfa = n => Number(n).toLocaleString("fr-FR").replace(/ | /g, " ") + " FCFA";
 const wa = (num, txt) => "https://wa.me/" + num + "?text=" + encodeURIComponent(txt);
-const mini = l => "couvertures/mini/" + l.couverture.split("/").pop();
+const mini = l => "couvertures/mini/" + String(l.couverture || "").split("/").pop();
+const afficheVideo = x => x.affiche || String(x.fichier || "").replace(/\.(mp4|webm|mov)$/i, ".jpg");
+/* Vignette manquante (livre ajouté depuis la plateforme de gestion) : on affiche la couverture complète. */
+document.addEventListener("error", e => {
+  const im = e.target; if (!(im instanceof HTMLImageElement) || im.dataset.repli) return;
+  const src = im.getAttribute("src") || "";
+  if (src.includes("couvertures/mini/")) { im.dataset.repli = "1"; im.src = src.replace("couvertures/mini/", "couvertures/"); }
+}, true);
 const auteursTxt = l => l.auteurs.join(" et ");
 const deux = n => String(n).padStart(2, "0");
 const reduit = matchMedia("(prefers-reduced-motion: reduce)");
@@ -247,7 +254,7 @@ function carteVideo(x) {
     : `<button class="btn btn-principal btn-petit btn-eclat" type="button" data-procurer="${id}">Acquérir ce livre</button>`;
   return `<article class="carte-video revele">
     <div class="video-cadre ${x.format === "vertical" ? "vertical" : "horizontal"}">
-      <video src="${esc(x.fichier)}" poster="${esc(x.affiche || "")}" preload="none" playsinline controls controlslist="nodownload" aria-label="${esc(x.type + " : " + x.titre)}"></video>
+      <video src="${esc(x.fichier)}" poster="${esc(afficheVideo(x))}" preload="none" playsinline controls controlslist="nodownload" aria-label="${esc(x.type + " : " + x.titre)}"></video>
       <span class="badge-video">${esc(x.type)}</span>
       <div class="video-fin" aria-hidden="true">
         <p class="vf-sur">Vous avez aimé cet aperçu ?</p>
@@ -280,7 +287,7 @@ function bandeVideos() {
       const coll = x.livre === "collection", l = coll ? null : LIVRES.find(b => b.slug === x.livre);
       if (!coll && !l) return "";
       return `<button class="bv-item" type="button" role="listitem" data-lecture="${i}" aria-label="Regarder : ${esc((coll ? "La collection complète" : l.titre) + " — " + x.type)}">
-        <span class="bv-image"><img src="${esc(x.affiche)}" alt="" loading="lazy" width="320" height="400"><span class="bv-play" aria-hidden="true">${IC_LECTURE}</span><span class="bv-type">${esc(x.type)}</span></span>
+        <span class="bv-image"><img src="${esc(afficheVideo(x))}" alt="" loading="lazy" width="320" height="400"><span class="bv-play" aria-hidden="true">${IC_LECTURE}</span><span class="bv-type">${esc(x.type)}</span></span>
         <span class="bv-nom">${esc(coll ? "La collection complète" : l.titre)}</span>
       </button>`;
     }).join("")}</div>
@@ -935,8 +942,20 @@ window.addEventListener("scroll", surDefilement, { passive: true }); surDefileme
 
 /* ---------- Chargement ---------- */
 vue.innerHTML = `<p class="chargement">Chargement de la bibliothèque…</p>`;
-Promise.all([fetch("data/livres.json?v=20261121b").then(r => r.json()), fetch("data/config.json?v=20261121b").then(r => r.json())])
+Promise.all([fetch("data/livres.json?v=20261121c", { cache: "no-cache" }).then(r => r.json()), fetch("data/config.json?v=20261121c", { cache: "no-cache" }).then(r => r.json())])
   .then(([l, c]) => {
+    /* Tolérance aux fiches saisies depuis la plateforme de gestion */
+    const sl = t => String(t || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+    l = (l || []).filter(x => x && x.titre).map((x, i) => {
+      const y = { ...x };
+      y.slug = y.slug || sl(y.titre); y.id = String(y.id || y.slug);
+      ["auteurs", "description", "cles", "chapitres"].forEach(k => { y[k] = (Array.isArray(y[k]) ? y[k] : (y[k] ? [y[k]] : [])).filter(Boolean); });
+      if (!y.auteurs.length) y.auteurs = ["Docteur B. Silas Gbavou"];
+      y.prix = +y.prix || 0; y.pages = +y.pages || 0; y.devise = y.devise || "FCFA";
+      return y;
+    });
+    c.vente = c.vente || {}; c.vente.videos = (c.vente.videos || []).filter(v => v && v.fichier);
+    (c.vente.lots || []).forEach(L => { L.ids = (L.ids || []).map(String); });
     TOUS = l; LIVRES = l.filter(x => x.disponible !== false); CFG = c;
     THEMES = [...new Set(LIVRES.map(x => x.theme))];
     if ((CFG.vente.videos || []).some(v => v.fichier)) document.getElementById("nav-videos").hidden = false;

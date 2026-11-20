@@ -1,0 +1,335 @@
+# Plateforme de gestion de la librairie — Pages CMS (https://app.pagescms.org)
+# Chaque enregistrement publie la modification sur le site en une à deux minutes.
+
+media:
+  - name: couvertures
+    label: Couvertures des livres
+    input: couvertures
+    output: couvertures
+    categories: [image]
+    rename: safe
+  - name: videos
+    label: Vidéos
+    input: videos
+    output: videos
+    categories: [video, image]
+    rename: safe
+  - name: images
+    label: Photos et visuels
+    input: images
+    output: images
+    categories: [image]
+    rename: safe
+
+content:
+  # ─────────────────────────── LIVRES ───────────────────────────
+  - name: livres
+    label: Livres
+    type: file
+    path: data/livres.json
+    format: json
+    list: true
+    fields:
+      - name: titre
+        label: Titre du livre
+        type: string
+        required: true
+      - name: sous
+        label: Sous-titre
+        type: string
+      - name: couverture
+        label: Couverture (image JPG, format portrait)
+        type: image
+        required: true
+        options:
+          media: couvertures
+      - name: prix
+        label: Prix en FCFA (chiffres seulement, ex. 5000)
+        type: number
+        required: true
+        options:
+          min: 0
+      - name: lienPaiement
+        label: Lien de la page Maketou du livre
+        description: Copiez l'adresse de la page du produit sur Maketou (sans /checkout).
+        type: string
+      - name: disponible
+        label: Afficher ce livre sur le site
+        type: boolean
+        default: true
+      - name: theme
+        label: Thème
+        type: select
+        options:
+          values: ["Prophétique & Esprit", "Royaume & Rédemption", "Église & Ministère", "Prière"]
+      - name: auteurs
+        label: Auteur(s)
+        type: string
+        list: true
+        default: ["Docteur B. Silas Gbavou"]
+      - name: pages
+        label: Nombre de pages
+        type: number
+      - name: format
+        label: Format
+        type: select
+        options:
+          values: [A4, A5]
+      - name: copyright
+        label: Date d'édition (ex. Novembre 2026)
+        type: string
+      - name: description
+        label: Présentation (un paragraphe par élément)
+        type: text
+        list: true
+      - name: cles
+        label: Ce que le lecteur va découvrir (une idée par élément)
+        type: text
+        list: true
+      - name: chapitres
+        label: Chapitres ou grandes parties
+        type: string
+        list: true
+      - name: sommaireType
+        label: Les chapitres ci-dessus sont…
+        type: select
+        default: extraits
+        options:
+          values:
+            - { value: extraits, label: "Quelques chapitres (aperçu)" }
+            - { value: chapitres, label: "Tous les chapitres" }
+            - { value: parties, label: "Les grandes parties" }
+      - name: pour
+        label: Pour qui ?
+        type: text
+      - name: citation
+        label: Citation tirée du livre
+        type: text
+      - name: citation_page
+        label: Page de la citation dans le PDF
+        type: number
+      - name: extrait
+        label: Lien vers un extrait gratuit (facultatif)
+        type: string
+      - name: id
+        label: Numéro du livre (ex. 15) — unique, ne plus le changer ensuite
+        type: string
+      - name: slug
+        label: Adresse courte du livre (ex. mon-nouveau-livre) — sans espace ni accent, ne plus la changer ensuite
+        type: string
+      - name: devise
+        label: Devise
+        type: string
+        hidden: true
+        default: FCFA
+      - name: isbn
+        label: ISBN
+        type: string
+      - name: date
+        label: Date
+        type: string
+        hidden: true
+      - name: video
+        label: Vidéo (champ technique)
+        type: string
+        hidden: true
+      - name: verifie
+        label: Vérification (champ technique)
+        type: object
+        hidden: true
+        fields:
+          - { name: source, label: Source, type: string }
+          - { name: pdfEditionVendue, label: PDF vérifié, type: boolean }
+
+  # ─────────────────────────── RÉGLAGES ───────────────────────────
+  - name: reglages
+    label: Vidéos, prix des collections, auteur, éditeur et contacts
+    type: file
+    path: data/config.json
+    format: json
+    fields:
+      - { name: boutique, label: Nom de la boutique, type: string }
+      - { name: structure, label: Structure, type: string }
+      - { name: pays, label: Pays, type: string }
+
+      - name: vente
+        label: Vente, vidéos et collections
+        type: object
+        fields:
+          - name: videos
+            label: Vidéos du site
+            description: "Pour lier une vidéo à un livre, écrivez l'adresse courte du livre (ex. vase-d-or). Pour la vidéo de toute la collection, écrivez : collection."
+            type: object
+            list: true
+            fields:
+              - { name: titre, label: Titre de la vidéo, type: string, required: true }
+              - name: fichier
+                label: Fichier vidéo (MP4, de préférence moins de 25 Mo)
+                type: file
+                required: true
+                options: { media: videos }
+              - name: affiche
+                label: Image d'aperçu (facultatif — créée automatiquement sinon)
+                type: image
+                options: { media: videos }
+              - { name: livre, label: Livre concerné (adresse courte) ou « collection », type: string, required: true }
+              - name: type
+                label: Type de vidéo
+                type: select
+                options:
+                  values: ["Présentation", "Extrait d'enseignement", "Collection"]
+              - name: format
+                label: Format
+                type: select
+                default: vertical
+                options:
+                  values:
+                    - { value: vertical, label: "Vertical (téléphone)" }
+                    - { value: horizontal, label: "Horizontal (YouTube)" }
+
+          - name: ensemble
+            label: Tarif d'ensemble de toutes les collections
+            type: object
+            fields:
+              - { name: prix, label: Prix de l'ensemble en FCFA (ex. 65000), type: number }
+              - { name: totalReference, label: Total des prix séparés au moment où ce prix a été fixé, type: number }
+              - { name: arrondi, label: Arrondi des prix calculés (FCFA), type: number }
+              - { name: note, label: Note interne, type: text }
+          - name: lots
+            label: Collections
+            description: Un livre qui n'est dans aucune liste rejoint automatiquement la dernière collection. Les prix des collections se calculent seuls.
+            type: object
+            list: true
+            fields:
+              - { name: nom, label: Nom de la collection, type: string, required: true }
+              - { name: lien, label: Lien Maketou de la collection, type: string }
+              - { name: ids, label: Numéros des livres de la collection (ex. 01), type: string, list: true }
+              - { name: id, label: Identifiant technique, type: string, hidden: true }
+
+          - { name: whatsappCommandes, label: WhatsApp des commandes (chiffres seulement), type: string }
+          - { name: whatsappAssistance, label: WhatsApp d'assistance (chiffres seulement), type: string }
+          - { name: boutiqueMaketou, label: Adresse de la boutique Maketou, type: string }
+          - { name: urlSite, label: Adresse du site, type: string }
+          - { name: urlCanonique, label: Adresse canonique, type: string, hidden: true }
+          - { name: devise, label: Devise, type: string, hidden: true }
+          - { name: deviseAffichee, label: Devise affichée, type: string, hidden: true }
+          - { name: lienCollection, label: Ancien lien collection, type: string, hidden: true }
+          - { name: lienCollectionAVenir, label: Ancien lien collection, type: string, hidden: true }
+          - { name: prixCollection, label: Ancien prix collection, type: number, hidden: true }
+          - name: paiementEnLigne
+            label: Paiement en ligne
+            type: object
+            hidden: true
+            fields:
+              - { name: actif, label: Actif, type: boolean }
+              - { name: prestataire, label: Prestataire, type: string }
+              - { name: verifie, label: Vérifié, type: boolean }
+              - { name: note, label: Note, type: text }
+          - name: mobileMoney
+            label: Mobile Money
+            type: object
+            hidden: true
+            fields:
+              - { name: actif, label: Actif, type: boolean }
+              - { name: instructions, label: Instructions, type: text }
+          - name: change
+            label: Taux de change
+            type: object
+            hidden: true
+            fields:
+              - name: parite
+                label: Parité
+                type: object
+                fields:
+                  - { name: EUR, label: EUR, type: number }
+              - name: usdReference
+                label: Référence USD
+                type: object
+                fields:
+                  - { name: eurUsd, label: EUR/USD, type: number }
+                  - { name: date, label: Date, type: string }
+                  - { name: source, label: Source, type: string }
+              - { name: sources, label: Sources, type: string, list: true }
+              - { name: cacheHeures, label: Cache (heures), type: number }
+
+      - name: auteur
+        label: L'auteur
+        type: object
+        fields:
+          - { name: nom, label: Nom affiché, type: string }
+          - { name: nomComplet, label: Nom complet, type: string }
+          - { name: bioCourte, label: Présentation courte, type: text }
+          - { name: bio, label: Biographie (un paragraphe par élément), type: text, list: true }
+          - { name: vision, label: Vision, type: text }
+          - { name: ecriture, label: Son écriture (un paragraphe par élément), type: text, list: true }
+          - { name: fonctions, label: Fonctions, type: string, list: true }
+          - { name: citation, label: Citation, type: text }
+          - { name: noteTitre, label: Note sur le titre de Docteur, type: text }
+          - { name: photo, label: Photo principale, type: image, options: { media: images } }
+          - { name: photoBuste, label: Photo en buste (petit format), type: image, options: { media: images } }
+          - { name: galerie, label: Galerie de photos, type: image, list: true, options: { media: images } }
+          - { name: whatsapp, label: WhatsApp, type: string }
+          - { name: email, label: E-mail, type: string }
+          - { name: facebook, label: Lien Facebook, type: string }
+          - { name: nationalite, label: Nationalité, type: string }
+          - { name: bio_source, label: Source de la biographie, type: string, hidden: true }
+
+      - name: editeur
+        label: La maison d'édition
+        type: object
+        fields:
+          - { name: fonction, label: Direction, type: string }
+          - { name: vocation, label: Vocation, type: text }
+          - { name: philosophie, label: Philosophie, type: text }
+          - { name: devise, label: Devise, type: string }
+          - { name: competences, label: Compétences, type: string, list: true }
+          - { name: email, label: E-mail, type: string }
+          - { name: whatsapp, label: WhatsApp, type: string }
+          - { name: adresse, label: Adresse, type: string }
+          - { name: facebook, label: Facebook, type: string }
+          - { name: logo, label: Logo, type: image, options: { media: images } }
+          - { name: marque, label: Logo court, type: image, options: { media: images } }
+          - { name: slogan, label: Slogan, type: string, hidden: true }
+          - name: annonce
+            label: Annonce de la maison d'édition (bas de page)
+            type: object
+            fields:
+              - { name: titre, label: Titre, type: string }
+              - { name: accroche, label: Accroche, type: string }
+              - { name: services, label: Services, type: string, list: true }
+              - { name: promesse, label: Promesse, type: string }
+              - { name: promesseTexte, label: Texte de la promesse, type: text }
+              - { name: appel, label: Appel, type: string }
+              - { name: visuels, label: Visuels, type: image, list: true, options: { media: images } }
+
+      - name: contacts
+        label: Contacts du bas de page
+        type: object
+        list: true
+        fields:
+          - name: type
+            label: Type
+            type: select
+            options:
+              values: [whatsapp, email, facebook]
+          - { name: label, label: Intitulé, type: string }
+          - { name: valeur, label: Texte affiché, type: string }
+          - { name: lien, label: "Lien (wa.me/…, mailto:…, https://…)", type: string }
+
+      - name: mesure
+        label: Mesure d'audience
+        type: object
+        hidden: true
+        fields:
+          - { name: actif, label: Actif, type: boolean }
+          - { name: note, label: Note, type: text }
+      - name: infosLegales
+        label: Informations légales
+        type: object
+        fields:
+          - { name: adresseProfessionnelle, label: Adresse professionnelle, type: string }
+          - { name: rccm, label: RCCM, type: string }
+          - { name: ifu, label: IFU, type: string }
+          - { name: delaiTraitement, label: Délai de traitement, type: string }
+          - { name: remboursement, label: Remboursement, type: text }
+          - { name: usageCollectif, label: Usage collectif, type: text }

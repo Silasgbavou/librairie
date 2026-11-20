@@ -1,0 +1,49 @@
+# Prépare automatiquement les médias ajoutés depuis la plateforme de gestion :
+#  - vignettes légères des couvertures (couvertures/mini/)
+#  - image d'aperçu de chaque vidéo (même nom, en .jpg)
+name: Préparer les médias
+on:
+  push:
+    branches: [main]
+    paths: ["couvertures/**", "videos/**"]
+  workflow_dispatch:
+permissions:
+  contents: write
+  pages: write
+concurrency: { group: medias, cancel-in-progress: false }
+jobs:
+  medias:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Outils
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq imagemagick ffmpeg >/dev/null
+      - name: Vignettes et aperçus manquants
+        run: |
+          set -e
+          mkdir -p couvertures/mini
+          for f in couvertures/*.jpg couvertures/*.jpeg couvertures/*.png couvertures/*.webp; do
+            [ -f "$f" ] || continue
+            b=$(basename "$f"); m="couvertures/mini/$b"
+            [ -f "$m" ] && continue
+            convert "$f" -auto-orient -resize 420x -strip -quality 82 "$m"
+            echo "vignette : $m"
+          done
+          for v in videos/*.mp4 videos/*.webm videos/*.mov; do
+            [ -f "$v" ] || continue
+            j="${v%.*}.jpg"
+            [ -f "$j" ] && continue
+            ffmpeg -loglevel error -y -ss 1 -i "$v" -frames:v 1 -vf "scale='min(720,iw)':-2" -q:v 3 "$j" || true
+            echo "aperçu : $j"
+          done
+      - name: Enregistrer et republier
+        env: { GH_TOKEN: "${{ github.token }}" }
+        run: |
+          if [ -n "$(git status --porcelain)" ]; then
+            git config user.name "Préparation automatique"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add -A couvertures videos
+            git commit -m "Médias : vignettes et aperçus automatiques"
+            git push
+            gh api -X POST "repos/${{ github.repository }}/pages/builds" >/dev/null || true
+          fi
