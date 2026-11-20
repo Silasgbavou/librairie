@@ -325,21 +325,39 @@ function noteEditeur(court) {
     </ul>
   </aside>`;
 }
+/* Collections : prix d'ensemble réparti au prorata, recalculé automatiquement
+   (nouveau livre → dernière collection ; nouveau total → même proportion). */
+function lotsCalcules() {
+  const E = CFG.vente.ensemble || {}, base = CFG.vente.lots || [];
+  if (!base.length) return { lots: [], total: 0, ensemble: 0 };
+  const pris = new Set(base.flatMap(L => L.ids));
+  const lots = base.map((L, i) => ({ ...L, livres: [...L.ids, ...(i === base.length - 1 ? LIVRES.filter(l => !pris.has(l.id)).map(l => l.id) : [])].map(id => LIVRES.find(l => l.id === id)).filter(Boolean) })).filter(L => L.livres.length);
+  lots.forEach(L => { L.valeur = L.livres.reduce((s, l) => s + (l.prix || 0), 0); });
+  const total = lots.reduce((s, L) => s + L.valeur, 0), pas = E.arrondi || 500;
+  const ensemble = total === E.totalReference ? E.prix : Math.round(total * E.prix / E.totalReference / pas) * pas;
+  let reste = ensemble;
+  lots.forEach((L, i) => { L.prix = i === lots.length - 1 ? reste : Math.round(ensemble * L.valeur / total / pas) * pas; reste -= L.prix; });
+  return { lots, total, ensemble };
+}
 function blocCollection() {
-  const lots = (CFG.vente.lots || []).map(L => ({ ...L, livres: L.ids.map(id => LIVRES.find(l => l.id === id)).filter(Boolean) })).filter(L => L.livres.length);
+  const { lots, total: tot, ensemble: fin } = lotsCalcules();
   if (!lots.length) return "";
   return `<div class="collection">
     <div>
       <span class="pastille-info"><i></i>Collections</span>
       <h2 style="margin-top:16px">Recevez l'enseignement <span class="b-clair">par ensemble</span></h2>
       <p style="margin:14px 0 6px">Pour les leaders, les écoles bibliques et les groupes d'étude qui veulent recevoir l'enseignement dans sa cohérence.</p>
+      ${tot > fin ? `<div class="offre-ensemble">
+        <span class="oe-sur">Tarif d'ensemble</span>
+        <p class="oe-prix num">Les ${LIVRES.length} ouvrages : ${px(fin)} <span class="oe-avant">au lieu de <del>${px(tot)}</del></span></p>
+        <p class="oe-texte">Ce tarif préférentiel s'applique à l'acquisition des collections et se répartit entre elles au prorata de leur valeur. Notre démarche n'étant pas commerciale, il ne s'agit pas d'une promotion, mais d'un accompagnement offert à ceux qui reçoivent l'enseignement dans son ensemble.</p>
+      </div>` : ""}
       <div class="prix-collection">${selecteurDevise("devises-clair")}</div>
       ${infoDevise()}
-      <div class="lots">${lots.map(L => { const t = L.livres.reduce((s, l) => s + (l.prix || 0), 0); return `<article class="lot">
-        <div class="lot-tete"><div><b>${esc(L.nom)}</b><small>${L.livres.length} ouvrages en PDF</small></div><p class="lot-prix num">${px(L.prix)}</p></div>
+      <div class="lots">${lots.map(L => { return `<article class="lot">
+        <div class="lot-tete"><div><b>${esc(L.nom)}</b><small>${L.livres.length} ouvrages en PDF</small></div><div class="lot-prix-bloc"><p class="lot-prix num">${px(L.prix)}</p>${L.valeur > L.prix ? `<p class="lot-avant num">au lieu de <del>${px(L.valeur)}</del></p>` : ""}</div></div>
         <div class="lot-couvs" aria-hidden="true">${L.livres.map(l => `<img src="${mini(l)}" alt="" loading="lazy" width="42" height="60">`).join("")}</div>
         <p class="lot-liste">${L.livres.map(l => esc(l.titre)).join(" · ")}</p>
-        ${t > L.prix ? `<p class="lot-eco">Achetés séparément : ${px(t, "texte")}. Économie : ${px(t - L.prix, "texte")}.</p>` : ""}
         <button class="btn btn-capsule btn-eclat btn-petit" type="button" data-procurer="${L.id}">Se procurer cette collection</button>
       </article>`; }).join("")}</div>
     </div>
@@ -797,7 +815,8 @@ function procurer(id) {
   const lot = (CFG.vente.lots || []).find(L => L.id === id);
   if (lot) {
     if (enLigneActif() && lot.lien && ouvrir(lot.lien, "paiement-" + lot.id)) { toast("Ouverture de la page de paiement sécurisée"); return; }
-    ouvrir(lienAssistance(`je souhaite acquérir ${lot.nom} (${lot.ids.length} ouvrages).`), "assistance-" + lot.id); return;
+    const lc = lotsCalcules().lots.find(L => L.id === id);
+    ouvrir(lienAssistance(`je souhaite acquérir ${lot.nom} (${lc ? lc.livres.length : lot.ids.length} ouvrages).`), "assistance-" + lot.id); return;
   }
   if (id === "collection") {
     if (enLigneActif() && CFG.vente.lienCollection && ouvrir(CFG.vente.lienCollection, "paiement-collection")) { toast("Ouverture de la page de paiement sécurisée"); return; }
@@ -894,7 +913,7 @@ window.addEventListener("scroll", surDefilement, { passive: true }); surDefileme
 
 /* ---------- Chargement ---------- */
 vue.innerHTML = `<p class="chargement">Chargement de la bibliothèque…</p>`;
-Promise.all([fetch("data/livres.json?v=20261120g").then(r => r.json()), fetch("data/config.json?v=20261120g").then(r => r.json())])
+Promise.all([fetch("data/livres.json?v=20261120i").then(r => r.json()), fetch("data/config.json?v=20261120i").then(r => r.json())])
   .then(([l, c]) => {
     TOUS = l; LIVRES = l.filter(x => x.disponible !== false); CFG = c;
     THEMES = [...new Set(LIVRES.map(x => x.theme))];
