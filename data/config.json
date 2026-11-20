@@ -188,6 +188,78 @@
     "type": "Extrait d'enseignement",
     "titre": "Révélation, prophétie et enseignement",
     "format": "vertical"
+   },
+   {
+    "livre": "realites-de-la-redemption",
+    "fichier": "videos/realites-de-la-redemption-presentation.mp4",
+    "affiche": "videos/realites-de-la-redemption-presentation.jpg",
+    "type": "Présentation",
+    "titre": "Présentation officielle de l'ouvrage",
+    "format": "vertical"
+   },
+   {
+    "livre": "royaume-de-la-puissance",
+    "fichier": "videos/royaume-de-la-puissance-presentation.mp4",
+    "affiche": "videos/royaume-de-la-puissance-presentation.jpg",
+    "type": "Présentation",
+    "titre": "Présentation officielle de l'ouvrage",
+    "format": "vertical"
+   },
+   {
+    "livre": "sept-montagnes",
+    "fichier": "videos/sept-montagnes-presentation.mp4",
+    "affiche": "videos/sept-montagnes-presentation.jpg",
+    "type": "Présentation",
+    "titre": "Présentation officielle de l'ouvrage",
+    "format": "vertical"
+   },
+   {
+    "livre": "fondements-legaux-priere",
+    "fichier": "videos/fondements-legaux-priere-presentation.mp4",
+    "affiche": "videos/fondements-legaux-priere-presentation.jpg",
+    "type": "Présentation",
+    "titre": "Présentation officielle de l'ouvrage",
+    "format": "vertical"
+   },
+   {
+    "livre": "eglise-glorieuse",
+    "fichier": "videos/eglise-glorieuse-presentation.mp4",
+    "affiche": "videos/eglise-glorieuse-presentation.jpg",
+    "type": "Présentation",
+    "titre": "Présentation officielle de l'ouvrage",
+    "format": "vertical"
+   },
+   {
+    "livre": "priere-mouvements-de-dieu",
+    "fichier": "videos/priere-mouvements-de-dieu-presentation.mp4",
+    "affiche": "videos/priere-mouvements-de-dieu-presentation.jpg",
+    "type": "Présentation",
+    "titre": "Présentation officielle de l'ouvrage",
+    "format": "vertical"
+   },
+   {
+    "livre": "ruach-naba",
+    "fichier": "videos/ruach-naba-presentation.mp4",
+    "affiche": "videos/ruach-naba-presentation.jpg",
+    "type": "Présentation",
+    "titre": "Présentation officielle de l'ouvrage",
+    "format": "vertical"
+   },
+   {
+    "livre": "partenaires-de-dieu",
+    "fichier": "videos/partenaires-de-dieu-presentation.mp4",
+    "affiche": "videos/partenaires-de-dieu-presentation.jpg",
+    "type": "Présentation",
+    "titre": "Présentation officielle de l'ouvrage",
+    "format": "vertical"
+   },
+   {
+    "livre": "cinq-ministeres",
+    "fichier": "videos/cinq-ministeres-presentation.mp4",
+    "affiche": "videos/cinq-ministeres-presentation.jpg",
+    "type": "Présentation",
+    "titre": "Présentation officielle de l'ouvrage",
+    "format": "vertical"
    }
   ],
   "deviseAffichee": "FCFA",

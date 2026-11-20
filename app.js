@@ -191,7 +191,7 @@ const livre3d = (l, grand) => `<div class="livre3d"><div class="vol"><div class=
 function carte(l, titreNiveau) {
   const h = titreNiveau || "h3";
   return `<article class="carte">
-    <a class="couv" href="#livre-${l.slug}" tabindex="-1" aria-hidden="true"><img src="${mini(l)}" alt="" loading="lazy" width="420" height="595"></a>
+    <a class="couv" href="#livre-${l.slug}" tabindex="-1" aria-hidden="true"><img src="${mini(l)}" alt="" loading="lazy" width="420" height="595">${(CFG.vente.videos || []).some(v => v.livre === l.slug) ? `<span class="badge-carte-video">${IC_LECTURE}Vidéo</span>` : ""}</a>
     <span class="theme">${esc(l.theme)}</span>
     <${h}><a href="#livre-${l.slug}">${esc(l.titre)}</a></${h}>
     <span class="auteurs">${esc(auteursTxt(l))}</span>
@@ -250,7 +250,6 @@ function carteVideo(x) {
       <div class="video-fin" aria-hidden="true">
         <p class="vf-sur">Vous avez aimé cet aperçu ?</p>
         <p class="vf-titre">${esc(titreLivre)}</p>
-        ${prix ? `<p class="vf-prix num">${px(prix)}</p>` : ""}
         <div class="vf-actions">${appel}<button class="btn btn-capsule btn-petit" type="button" data-revoir>Revoir</button></div>
       </div>
     </div>
@@ -264,6 +263,26 @@ function carteVideo(x) {
     </div>
     <div class="cv-actions">${appel}${coll ? `<a class="btn btn-capsule btn-petit" href="#catalogue">Voir les ouvrages</a>` : `<a class="btn btn-capsule btn-petit" href="#livre-${l.slug}">Découvrir</a>`}</div>
   </article>`;
+}
+/* Bande de vidéos : compacte, défilement horizontal, ouverture dans un lecteur */
+function ordreVideos() {
+  const V = (CFG.vente.videos || []).map((x, i) => ({ x, i })).filter(o => o.x.fichier);
+  const rang = o => o.x.livre === "collection" ? 0 : /^Pr/.test(o.x.type) ? 1 : 2;
+  return V.sort((a, b) => rang(a) - rang(b));
+}
+function bandeVideos() {
+  const V = ordreVideos(); if (!V.length) return "";
+  return `<section class="bande-videos" aria-labelledby="bv-titre"><div class="wrap">
+    <div class="bv-tete"><span class="bv-pastille"><i></i>En vidéo</span><h2 id="bv-titre">Les ouvrages <span class="b">en vidéo</span></h2><a class="bv-tout" href="#videos">Tout voir</a></div>
+    <div class="bv-rail" role="list">${V.map(({ x, i }) => {
+      const coll = x.livre === "collection", l = coll ? null : LIVRES.find(b => b.slug === x.livre);
+      if (!coll && !l) return "";
+      return `<button class="bv-item" type="button" role="listitem" data-lecture="${i}" aria-label="Regarder : ${esc((coll ? "La collection complète" : l.titre) + " — " + x.type)}">
+        <span class="bv-image"><img src="${esc(x.affiche)}" alt="" loading="lazy" width="320" height="400"><span class="bv-play" aria-hidden="true">${IC_LECTURE}</span><span class="bv-type">${esc(x.type)}</span></span>
+        <span class="bv-nom">${esc(coll ? "La collection complète" : l.titre)}</span>
+      </button>`;
+    }).join("")}</div>
+  </div></section>`;
 }
 function blocVideos(filtreV, limite) {
   const v = (CFG.vente.videos || []).filter(x => x.fichier && (!filtreV || filtreV(x))).slice(0, limite || 99);
@@ -336,6 +355,8 @@ function pageAccueil() {
     <div class="vitrine" aria-hidden="true" data-enter="3"><div class="halo"></div>${pile.map(l => livre3d(l, true)).join("")}<span class="etiquette">Providence Éditions Prestige</span></div>
   </div>${vagues}</section>
 
+  ${bandeVideos()}
+
   <section style="padding-top:clamp(28px,4vw,48px)"><div class="wrap">
     <div class="section-tete"><div><span class="pastille-info"><i></i>Sélection</span><h2 style="margin-top:14px">Quatre portes <span class="b">d'entrée</span></h2><p class="chapeau">L'onction, le prophétique, la prière et le ministère de la Parole.</p></div><a class="btn btn-capsule btn-petit" href="#catalogue">Tout le catalogue</a></div>
     <div class="grille">${choix.map(l => carte(l)).join("")}</div>
@@ -402,7 +423,10 @@ function grilleCatalogue() {
 const texteResultat = () => { const n = listeFiltree().length; return `${n} ${n > 1 ? "livres" : "livre"}${filtre !== "Tous" ? " · " + filtre : ""}`; };
 function pageCatalogue() {
   return `<section style="padding-top:clamp(28px,4vw,48px)"><div class="wrap">
-    <div class="section-tete"><div>${enTete("Catalogue", `Les <span class="b">${LIVRES.length} livres</span>`, "Touchez une couverture pour lire la présentation complète.")}</div></div>
+    <div class="section-tete"><div>${enTete("La librairie", `Les ouvrages du <span class="b">Docteur B. Silas Gbavou</span>`, "Doctrine, prophétie, prière, Royaume et ministère : parcourez la librairie, puis touchez une couverture pour découvrir l'ouvrage.")}</div></div>
+    </div></section>
+  ${bandeVideos()}
+  <section style="padding-top:clamp(20px,3vw,32px)"><div class="wrap">
     <div class="outils">
       <div class="recherche">${IC.loupe}<label class="sr" for="q">Rechercher un livre</label><input id="q" type="search" placeholder="Rechercher un titre, un thème…" value="${esc(recherche)}" autocomplete="off"></div>
       <div class="filtres" role="group" aria-label="Filtrer par thème">
@@ -715,6 +739,8 @@ function router() {
   else html = ({ catalogue: pageCatalogue, commande: pageCommande, auteur: pageAuteur, aide: pageAide, videos: pageVideos, confirmation: pageCommande, contact: pageContact, editeur: pageEditeur, conditions: pageConditions, livraison: pageLivraison, confidentialite: pageConfidentialite }[h] || pageAccueil)();
   if (nav === "confirmation") nav = "commande";
   if (!["accueil","catalogue","commande","auteur","aide","videos","editeur","contact"].includes(nav)) nav = ["conditions","livraison","confidentialite"].includes(nav) ? "aide" : "accueil";
+  const lect = document.getElementById("lecteur");
+  if (lect && lect.open) { const v = lect.querySelector("video"); if (v) v.pause(); try { lect.close(); } catch (err) { lect.removeAttribute("open"); } }
   vue.innerHTML = html;
   $$("[data-nav]").forEach(a => { const on = a.dataset.nav === nav; a.classList.toggle("actif", on); on ? a.setAttribute("aria-current", "page") : a.removeAttribute("aria-current"); });
   if (livre) { meta(livre.titre + " — Docteur B. Silas Gbavou", (livre.description[0] || "").slice(0, 160), livre.couverture); donneesStructurees(livre); mesure("vue_livre", { livre: livre.id }); }
@@ -771,6 +797,15 @@ document.addEventListener("click", e => {
   const ag = e.target.closest("[data-agrandir]");
   if (ag) { const d = $("#visionneuse"); $("img", d).src = ag.dataset.agrandir; $("img", d).alt = $("img", ag).alt; try { d.showModal(); } catch (err) { d.setAttribute("open", ""); } return; }
   if (e.target.closest("[data-fermer]") || e.target.id === "visionneuse") { const d = $("#visionneuse"); try { d.close(); } catch (err) { d.removeAttribute("open"); } return; }
+  const lc = e.target.closest("[data-lecture]");
+  if (lc) {
+    const x = (CFG.vente.videos || [])[+lc.dataset.lecture], d = $("#lecteur"); if (!x || !d) return;
+    $(".lecteur-corps", d).innerHTML = carteVideo(x);
+    try { d.showModal(); } catch (err) { d.setAttribute("open", ""); }
+    const v = $("video", d); if (v) { v.preload = "auto"; v.play().catch(() => {}); }
+    mesure("video_ouverte", { livre: x.livre }); return;
+  }
+  if (e.target.closest("[data-fermer-lecteur]") || e.target.id === "lecteur") { const d = $("#lecteur"); const v = $("video", d); if (v) v.pause(); try { d.close(); } catch (err) { d.removeAttribute("open"); } return; }
   const rv = e.target.closest("[data-revoir]");
   if (rv) { const c = rv.closest(".video-cadre"), v = c && $("video", c); if (v) { c.classList.remove("fini"); v.currentTime = 0; v.play().catch(() => {}); } return; }
   const rg = e.target.closest("[data-regler]");
