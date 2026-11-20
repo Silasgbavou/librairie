@@ -108,6 +108,11 @@ content:
       - name: citation_page
         label: Page de la citation dans le PDF
         type: number
+      - name: motsCles
+        label: Mots-clés de recherche (invisibles sur le site, un par élément)
+        description: Sujets réellement traités dans le livre, tels que les lecteurs les tapent sur Google.
+        type: string
+        list: true
       - name: extrait
         label: Lien vers un extrait gratuit (facultatif)
         type: string

@@ -1,0 +1,31 @@
+# Garde le référencement à jour après chaque modification des données
+# (livres, prix, auteur…) faite depuis la plateforme de gestion ou ailleurs.
+name: Référencement
+on:
+  push:
+    branches: [main]
+    paths: ["data/**", "outils/seo.py"]
+  workflow_dispatch:
+permissions:
+  contents: write
+  pages: write
+concurrency: { group: referencement, cancel-in-progress: false }
+jobs:
+  seo:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }
+      - name: Générer métadonnées, données structurées et plan du site
+        run: python3 outils/seo.py
+      - name: Enregistrer et republier
+        env: { GH_TOKEN: "${{ github.token }}" }
+        run: |
+          if [ -n "$(git status --porcelain index.html sitemap.xml livres)" ]; then
+            git config user.name "Référencement automatique"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add index.html sitemap.xml livres
+            git commit -m "Référencement : mise à jour automatique"
+            git push
+            gh api -X POST "repos/${{ github.repository }}/pages/builds" >/dev/null || true
+          fi

@@ -194,7 +194,11 @@ function liensPaiement() {
 const prixLigne = l => l.prix ? `<span class="etat-prix num">${px(l.prix)}</span>` : `<span class="etat-prix inconnu">Prix sur demande</span>`;
 
 /* ---------- Composants ---------- */
-const livre3d = (l, grand) => `<div class="livre3d"><div class="vol"><div class="dos"></div><div class="pages"></div><div class="face"><img src="${grand ? l.couverture : mini(l)}" alt="Couverture du livre ${esc(l.titre)}" width="${grand ? 800 : 420}" height="${grand ? 1133 : 595}" ${grand ? "" : 'loading="lazy"'}></div></div></div>`;
+const livre3d = (l, grand, o) => { o = o || {};
+  /* o.tailles : la vitrine propose aussi la vignette, le navigateur choisit l'image nette la plus légère. */
+  const src = o.tailles ? ` srcset="${mini(l)} 420w, ${l.couverture} 800w" sizes="${o.tailles}"` : "";
+  const chargement = o.paresseux || !grand ? 'loading="lazy"' : (o.priorite ? 'fetchpriority="high"' : "");
+  return `<div class="livre3d"><div class="vol"><div class="dos"></div><div class="pages"></div><div class="face"><img src="${grand ? l.couverture : mini(l)}"${src} alt="Couverture du livre ${esc(l.titre)}" width="${grand ? 800 : 420}" height="${grand ? 1133 : 595}" ${chargement}></div></div></div>`; };
 function carte(l, titreNiveau) {
   const h = titreNiveau || "h3";
   return `<article class="carte">
@@ -418,7 +422,7 @@ function pageAccueil() {
           <path d="M22 78 H578 Q588 78 588 88 V96 Q588 106 576 106 H24 Q12 106 12 96 V88 Q12 78 22 78Z" fill="url(#vtTranche)"/>
           <path d="M30 78.6 H570" stroke="url(#vtReflet)" stroke-width="1.6"/>
         </svg>
-        ${pile.map((l, i) => `<div class="vt-livre vt-${i + 1}"><span class="vt-ombre"></span><div class="vt-flotte">${livre3d(l, true)}</div></div>`).join("")}
+        ${pile.map((l, i) => `<div class="vt-livre vt-${i + 1}"><span class="vt-ombre"></span><div class="vt-flotte">${livre3d(l, true, { tailles: i === 2 ? "(max-width: 599px) 42vw, 210px" : "(max-width: 599px) 33vw, 170px", paresseux: i === 0 || i === 4, priorite: i === 2 })}</div></div>`).join("")}
       </div>
       <p class="vt-signature"><span>Providence Éditions Prestige</span></p>
     </div>
@@ -782,19 +786,26 @@ function meta(titre, desc, image) {
   $("#meta-desc").setAttribute("content", desc);
   $("#og-titre").setAttribute("content", titre);
   $("#og-desc").setAttribute("content", desc);
-  $("#og-image").setAttribute("content", image || "couvertures/01-vase-d-or.jpg");
-  const base = CFG.vente.urlCanonique;
+  const base = CFG.vente.urlCanonique || "";
+  const can0 = $('link[rel="canonical"]');
+  const abs = u => (/^https?:/.test(u) || !base) ? u : base + String(u).replace(/^\//, "");
+  const img = abs(image || "couvertures/01-vase-d-or.jpg");
+  $("#og-image").setAttribute("content", img);
+  [["#tw-titre", titre], ["#tw-desc", desc], ["#tw-image", img]].forEach(([s, v]) => { const el = $(s); if (el) el.setAttribute("content", v); });
+  const ou = $("#og-url"); if (ou && base && !(can0 && can0.dataset.fixe)) ou.setAttribute("content", base + location.hash);
+  /* Les adresses en « # » ne sont pas des pages distinctes pour les moteurs : l'URL canonique reste l'accueil. */
   let can = $('link[rel="canonical"]');
-  if (base) { if (!can) { can = document.createElement("link"); can.rel = "canonical"; document.head.appendChild(can); } can.href = base + location.hash; }
+  if (base && !(can && can.dataset.fixe)) { if (!can) { can = document.createElement("link"); can.rel = "canonical"; document.head.appendChild(can); } can.href = base; }
 }
 function donneesStructurees(l) {
   let s = $("#ld"); if (s) s.remove();
   if (!l) return;
   s = document.createElement("script"); s.type = "application/ld+json"; s.id = "ld";
-  const d = { "@context": "https://schema.org", "@type": "Book", name: l.titre, author: l.auteurs.map(n => ({ "@type": "Person", name: n })), publisher: { "@type": "Organization", name: "Providence Éditions Prestige" }, bookFormat: "https://schema.org/EBook", inLanguage: "fr", image: l.couverture };
+  const d = { "@context": "https://schema.org", "@type": "Book", name: l.titre, author: l.auteurs.map(n => ({ "@type": "Person", name: n })), publisher: { "@type": "Organization", name: "Providence Éditions Prestige" }, bookFormat: "https://schema.org/EBook", inLanguage: "fr", image: (CFG.vente.urlCanonique || "") + l.couverture };
   if (l.pages) d.numberOfPages = l.pages;
   if (l.isbn) d.isbn = l.isbn;
-  if (l.prix) d.offers = { "@type": "Offer", price: l.prix, priceCurrency: CFG.vente.devise || "XOF" };
+  if ((l.motsCles || []).length) d.keywords = l.motsCles.join(", ");
+  if (l.prix) d.offers = { "@type": "Offer", price: l.prix, priceCurrency: CFG.vente.devise || "XOF", ...(/^https:/.test(l.lienPaiement || "") ? { url: (CFG.vente.urlCanonique || "") + "#livre-" + l.slug, availability: "https://schema.org/InStock" } : {}) };
   s.textContent = JSON.stringify(d); document.head.appendChild(s);
 }
 
@@ -942,7 +953,7 @@ window.addEventListener("scroll", surDefilement, { passive: true }); surDefileme
 
 /* ---------- Chargement ---------- */
 vue.innerHTML = `<p class="chargement">Chargement de la bibliothèque…</p>`;
-Promise.all([fetch("data/livres.json?v=20261121c", { cache: "no-cache" }).then(r => r.json()), fetch("data/config.json?v=20261121c", { cache: "no-cache" }).then(r => r.json())])
+Promise.all([fetch("data/livres.json?v=20261121d", { cache: "no-cache" }).then(r => r.json()), fetch("data/config.json?v=20261121d", { cache: "no-cache" }).then(r => r.json())])
   .then(([l, c]) => {
     /* Tolérance aux fiches saisies depuis la plateforme de gestion */
     const sl = t => String(t || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
