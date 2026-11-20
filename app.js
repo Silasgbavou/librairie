@@ -488,9 +488,64 @@ const normal = s => s.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "");
 /* Recherche : titre, thème, sujets traités, présentation et chapitres ; sans accents ; tous les mots demandés. */
 const MOTS_VIDES = new Set(["de", "la", "le", "les", "du", "des", "et", "d", "l", "un", "une", "au", "aux", "en", "sur", "pour", "livre", "livres"]);
 const indexLivre = l => normal([l.titre, l.sous, l.theme, ...(l.auteurs || []), ...(l.motsCles || []), ...(l.cles || []), ...(l.description || []), ...(l.chapitres || [])].join(" ").replace(/[’']/g, " "));
+/* Index plein texte : mots réellement présents dans chaque livre (data/recherche.json, chargé à la première recherche). */
+const VIDES_IDX = new Set("alors aucun aussi autre autres avant avec avoir bien cela celle celles celui cette ceux chaque chez comme comment dans depuis donc dont elle elles encore entre etre fait faire leur leurs lors mais meme moins nous notre plus pour pourquoi quand quel quelle quelles quels sans selon sera ses sont sous tous tout toute toutes tres une vers vous votre vos etait etaient avait avaient peut peuvent ainsi apres cest quil quils dune aux des les est par pas que qui sur son ces mes tes nos lui eux ont ete".split(" "));
+let IDX = null, idxEnCours = null;
+function chargerIndex() {
+  if (IDX || idxEnCours) return idxEnCours;
+  idxEnCours = fetch("data/recherche.json?v=20261121f").then(r => r.json()).then(d => {
+    const pos = {}; d.livres.forEach((id, k) => { pos[id] = k; });
+    IDX = { pos, mots: d.mots || {}, paires: d.paires || {}, liste: Object.keys(d.mots || {}) };
+    if (recherche.trim() && $("#grille")) { $("#grille").innerHTML = grilleCatalogue(); $("#resultat").textContent = texteResultat(); }
+  }).catch(() => { idxEnCours = null; });
+  return idxEnCours;
+}
+const motsRequete = q => normal(q).replace(/[’'ʼ]/g, " ").split(/[^a-z0-9]+/).filter(m => m.length > 2 && !MOTS_VIDES.has(m) && !VIDES_IDX.has(m));
+/* Masque des livres contenant un terme : mot exact, puis mots commençant pareil (« ange » → « anges »), puis racine (« synthétique » → « synthèse »). */
+function masqueTexte(m) {
+  if (!IDX) return { exact: 0, proche: 0 };
+  const exact = IDX.mots[m] || 0;
+  let proche = 0;
+  if (m.length >= 4) for (const w of IDX.liste) if (w !== m && w.startsWith(m)) proche |= IDX.mots[w];
+  if (!exact && !proche && m.length >= 6) {
+    for (let n = m.length - 1; n >= 5 && !proche; n--) { const r = m.slice(0, n); for (const w of IDX.liste) if (w.startsWith(r)) proche |= IDX.mots[w]; }
+  }
+  return { exact, proche };
+}
+function scoreLivre(l, mots) {
+  const titre = normal([l.titre, l.sous].join(" ")), meta = normal([l.theme, ...(l.motsCles || []), ...(l.cles || []), ...(l.chapitres || []), ...(l.description || []), ...(l.auteurs || [])].join(" ").replace(/[’']/g, " "));
+  const bit = IDX && IDX.pos[l.id] !== undefined ? (1 << IDX.pos[l.id]) : 0;
+  let score = 0;
+  for (const m of mots) {
+    let s = 0;
+    if (titre.includes(m)) s += 20;
+    if (meta.includes(m)) s += 10;
+    if (bit) { const t = masqueTexte(m); if (t.exact & bit) s += 4; else if (t.proche & bit) s += 2; }
+    if (!s) return 0;
+    score += s;
+  }
+  if (IDX && bit) for (let k = 0; k + 1 < mots.length; k++) if ((IDX.paires[mots[k] + " " + mots[k + 1]] || 0) & bit) score += 12;
+  if (mots.length > 1 && normal([l.titre, l.sous, ...(l.motsCles || [])].join(" ")).includes(mots.join(" "))) score += 15;
+  return score;
+}
+function expression(l, mots) {
+  const meta = normal([l.titre, l.sous, l.theme, ...(l.motsCles || []), ...(l.cles || []), ...(l.chapitres || []), ...(l.description || [])].join(" ").replace(/[’']/g, " ")).replace(/[^a-z0-9]+/g, " ");
+  const cible = mots.join(" ");
+  if (meta.includes(cible)) return true;
+  const bit = IDX && IDX.pos[l.id] !== undefined ? (1 << IDX.pos[l.id]) : 0;
+  if (!bit) return false;
+  for (let k = 0; k + 1 < mots.length; k++) if (!((IDX.paires[mots[k] + " " + mots[k + 1]] || 0) & bit)) return false;
+  return true;
+}
 function listeFiltree() {
-  const mots = normal(recherche.trim()).replace(/[’']/g, " ").split(/[^a-z0-9]+/).filter(m => m.length > 1 && !MOTS_VIDES.has(m));
-  return LIVRES.filter(l => (filtre === "Tous" || l.theme === filtre) && (!mots.length || ((i) => mots.every(m => i.includes(m)))(indexLivre(l))));
+  const mots = motsRequete(recherche.trim());
+  const base = LIVRES.filter(l => filtre === "Tous" || l.theme === filtre);
+  if (!mots.length) return base;
+  if (!IDX) chargerIndex();
+  let res = base.map(l => ({ l, s: scoreLivre(l, mots), e: expression(l, mots) })).filter(x => x.s > 0);
+  /* Expression de plusieurs mots (« sein d'Abraham ») : si des livres la contiennent telle quelle, on ne garde qu'eux. */
+  if (mots.length > 1 && res.some(x => x.e)) res = res.filter(x => x.e);
+  return res.sort((a, b) => b.s - a.s).map(x => x.l);
 }
 /* Sujets proposés : uniquement des sujets réellement traités par au moins un livre. */
 const SUJETS = ["onction", "mouvement prophétique", "prière", "intercession", "fin des temps", "fils de Dieu", "anges", "nuée des témoins", "royaume de Dieu", "délivrance", "Saint-Esprit", "cinq ministères", "ministère de la Parole", "présence de Dieu"];
@@ -575,7 +630,6 @@ function pageLivre(l) {
             ${infoDevise()}
             <button class="btn btn-principal btn-large btn-eclat" type="button" data-procurer="${l.id}">Se procurer ce livre</button>
             <button class="btn btn-capsule btn-large" type="button" data-ajouter="${l.id}">Ajouter à ma sélection</button>
-            <button class="btn btn-contour btn-large btn-apercu" type="button" data-apercu="${l.id}">${IC.livreOuvert || ""}Feuilleter l'aperçu</button>
             ${l.extrait ? `<a class="btn btn-contour btn-large" href="${esc(l.extrait)}" target="_blank" rel="noopener" data-sortie="extrait">Lire un extrait</a>` : ""}
             <ul class="garanties"><li>Paiement sécurisé : Mobile Money ou carte bancaire</li><li>PDF remis automatiquement après l'achat</li><li>Lecture sur téléphone, tablette ou ordinateur</li></ul>
             ${noteEditeur(true)}
@@ -908,44 +962,6 @@ function procurer(id) {
   if (ajouter(id)) location.hash = "commande";
 }
 
-/* ---------- Aperçu : couverture, page de titre, sommaire, extrait (contenus réels du livre) ---------- */
-let apercu = { l: null, i: 0, pages: [] };
-function pagesApercu(l) {
-  const P = [];
-  P.push(`<div class="ap-page ap-couv"><img src="${esc(l.couverture)}" alt="Couverture du livre ${esc(l.titre)}" width="800" height="1133"></div>`);
-  P.push(`<div class="ap-page ap-titre"><small>Providence Éditions Prestige</small><h3>${esc(l.titre)}</h3>${l.sous ? `<p class="ap-sous">${esc(l.sous)}</p>` : ""}<p class="ap-auteur">${esc(auteursTxt(l))}</p><dl>${[["Format", "Livre numérique PDF" + (l.format ? " · " + l.format : "")], ["Pages", l.pages || ""], ["Thème", l.theme], ["Édition", l.copyright ? "© " + l.copyright : ""]].filter(x => x[1]).map(([a, b]) => `<div><dt>${a}</dt><dd>${esc(String(b))}</dd></div>`).join("")}</dl></div>`);
-  if ((l.chapitres || []).length) P.push(`<div class="ap-page ap-sommaire"><small>${l.sommaireType === "parties" ? "Les grandes parties" : l.sommaireType === "chapitres" ? "Sommaire" : "Quelques chapitres"}</small><ol>${l.chapitres.map(c => `<li>${esc(c)}</li>`).join("")}</ol>${l.sommaireType === "extraits" ? `<p class="ap-note">Sélection de chapitres : le sommaire complet figure dans le PDF.</p>` : ""}</div>`);
-  if ((l.cles || []).length) P.push(`<div class="ap-page ap-cles"><small>Ce que vous allez découvrir</small><ul>${l.cles.slice(0, 5).map(c => `<li>${esc(c)}</li>`).join("")}</ul></div>`);
-  if (l.citation) P.push(`<div class="ap-page ap-extrait"><small>Extrait</small><blockquote>« ${esc(l.citation)} »</blockquote><p class="ap-ref">${esc(l.titre)}${l.citation_page ? ", page " + l.citation_page + " du PDF" : ""}</p></div>`);
-  return P;
-}
-function ouvrirApercu(id) {
-  const l = LIVRES.find(x => x.id === id); if (!l) return;
-  apercu = { l, i: 0, pages: pagesApercu(l) };
-  const d = $("#apercu"); $(".ap-livre", d).textContent = l.titre;
-  $(".ap-acheter", d).dataset.procurer = l.id;
-  rendreApercu(0);
-  try { d.showModal(); } catch (err) { d.setAttribute("open", ""); }
-  mesure("apercu", { livre: id });
-}
-function rendreApercu(sens) {
-  const d = $("#apercu"), n = apercu.pages.length;
-  const sc = $(".ap-scene", d); sc.innerHTML = apercu.pages[apercu.i];
-  const pg = $(".ap-page", sc); if (pg && sens && !reduit.matches) pg.classList.add(sens > 0 ? "ap-entre-d" : "ap-entre-g");
-  $(".ap-pos", d).textContent = `${apercu.i + 1} / ${n}`;
-  $(".ap-prec", d).disabled = apercu.i === 0; $(".ap-suiv", d).disabled = apercu.i === n - 1;
-  $(".ap-points", d).innerHTML = apercu.pages.map((_, k) => `<span class="${k === apercu.i ? "on" : ""}"></span>`).join("");
-}
-function tournerApercu(sens) { const k = apercu.i + sens; if (k < 0 || k >= apercu.pages.length) return; apercu.i = k; rendreApercu(sens); }
-function fermerApercu() { const d = $("#apercu"); try { d.close(); } catch (err) { d.removeAttribute("open"); } }
-(() => {
-  const d = document.getElementById("apercu"); if (!d) return;
-  let x0 = null;
-  d.addEventListener("pointerdown", e => { if (e.target.closest(".ap-scene")) x0 = e.clientX; });
-  d.addEventListener("pointerup", e => { if (x0 === null) return; const dx = e.clientX - x0; x0 = null; if (Math.abs(dx) > 40) tournerApercu(dx < 0 ? 1 : -1); });
-  d.addEventListener("keydown", e => { if (e.key === "ArrowRight") tournerApercu(1); if (e.key === "ArrowLeft") tournerApercu(-1); });
-})();
-
 /* ---------- Actions ---------- */
 document.addEventListener("click", e => {
   const s = e.target.closest("[data-sortie]");
@@ -955,12 +971,6 @@ document.addEventListener("click", e => {
   const df = e.target.closest("[data-defile]");
   if (df) { e.preventDefault(); const c = document.getElementById(df.dataset.defile); if (c) { c.scrollIntoView({ behavior: reduit.matches ? "auto" : "smooth" }); const h = $("h2", c); if (h) { h.setAttribute("tabindex", "-1"); h.focus({ preventScroll: true }); } } return; }
   if (e.target.closest("[data-haut]")) { window.scrollTo({ top: 0, behavior: reduit.matches ? "auto" : "smooth" }); return; }
-  const ap = e.target.closest("[data-apercu]");
-  if (ap) { ouvrirApercu(ap.dataset.apercu); return; }
-  if (e.target.closest(".ap-prec")) { tournerApercu(-1); return; }
-  if (e.target.closest(".ap-suiv")) { tournerApercu(1); return; }
-  if (e.target.closest("[data-fermer-apercu]") || e.target.id === "apercu") { fermerApercu(); return; }
-  if (e.target.closest(".ap-acheter")) fermerApercu();
   const sj = e.target.closest("[data-sujet]");
   if (sj) { const v = normal(recherche.trim()) === normal(sj.dataset.sujet) ? "" : sj.dataset.sujet; recherche = v; const q = $("#q"); if (q) q.value = v; $$(".sujet").forEach(b => b.setAttribute("aria-pressed", normal(b.dataset.sujet) === normal(v) && !!v)); $("#grille").innerHTML = grilleCatalogue(); $("#resultat").textContent = texteResultat(); return; }
   const bs = e.target.closest("[data-besoin]");
@@ -1028,7 +1038,7 @@ document.addEventListener("click", e => {
   }
 });
 document.addEventListener("input", e => {
-  if (e.target.id === "q") { recherche = e.target.value; $("#grille").innerHTML = grilleCatalogue(); $("#resultat").textContent = texteResultat(); $$(".sujet").forEach(b => b.setAttribute("aria-pressed", !!recherche.trim() && normal(b.dataset.sujet) === normal(recherche.trim()))); }
+  if (e.target.id === "q") { chargerIndex(); recherche = e.target.value; $("#grille").innerHTML = grilleCatalogue(); $("#resultat").textContent = texteResultat(); $$(".sujet").forEach(b => b.setAttribute("aria-pressed", !!recherche.trim() && normal(b.dataset.sujet) === normal(recherche.trim()))); }
 });
 /* Le dock se retire pendant la saisie (clavier ouvert) pour ne pas masquer les champs */
 document.addEventListener("focusin", e => { if (e.target.matches("input,select,textarea")) $(".barre-mobile").classList.add("masque"); });
@@ -1042,7 +1052,7 @@ window.addEventListener("scroll", surDefilement, { passive: true }); surDefileme
 
 /* ---------- Chargement ---------- */
 vue.innerHTML = `<p class="chargement">Chargement de la bibliothèque…</p>`;
-Promise.all([fetch("data/livres.json?v=20261121e", { cache: "no-cache" }).then(r => r.json()), fetch("data/config.json?v=20261121e", { cache: "no-cache" }).then(r => r.json())])
+Promise.all([fetch("data/livres.json?v=20261121f", { cache: "no-cache" }).then(r => r.json()), fetch("data/config.json?v=20261121f", { cache: "no-cache" }).then(r => r.json())])
   .then(([l, c]) => {
     /* Tolérance aux fiches saisies depuis la plateforme de gestion */
     const sl = t => String(t || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
