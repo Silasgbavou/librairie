@@ -239,10 +239,12 @@ const IC_LECTURE = `<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="tr
 function carteVideo(x) {
   const coll = x.livre === "collection", l = coll ? null : LIVRES.find(b => b.slug === x.livre);
   if (!coll && !l) return "";
-  const titreLivre = coll ? `La collection complète · ${LIVRES.length} ouvrages` : l.titre;
-  const prix = coll ? CFG.vente.prixCollection : l.prix;
+  const titreLivre = coll ? "Tous les ouvrages du Docteur B. Silas Gbavou" : l.titre;
+  const prix = coll ? null : l.prix;
   const id = coll ? "collection" : l.id;
-  const appel = `<button class="btn btn-principal btn-petit btn-eclat" type="button" data-procurer="${id}">${coll ? "Acquérir la collection" : "Acquérir ce livre"}</button>`;
+  const appel = coll
+    ? `<button class="btn btn-principal btn-petit btn-eclat" type="button" data-liste-ouvrages>Acquérir les ouvrages</button>`
+    : `<button class="btn btn-principal btn-petit btn-eclat" type="button" data-procurer="${id}">Acquérir ce livre</button>`;
   return `<article class="carte-video revele">
     <div class="video-cadre ${x.format === "vertical" ? "vertical" : "horizontal"}">
       <video src="${esc(x.fichier)}" poster="${esc(x.affiche || "")}" preload="none" playsinline controls controlslist="nodownload" aria-label="${esc(x.type + " : " + x.titre)}"></video>
@@ -283,6 +285,19 @@ function bandeVideos() {
       </button>`;
     }).join("")}</div>
   </div></section>`;
+}
+/* Vidéo de la collection : accès aux ouvrages un par un (sans l'offre groupée) */
+const resume = l => { const t = l.sous || (l.description[0] || "").split(/(?<=\.)\s/)[0]; return t.length > 130 ? t.slice(0, 127).replace(/\s+\S*$/, "") + "…" : t; };
+function listeOuvrages() {
+  return `<div class="liste-ouvrages">
+    <div class="lo-tete"><span class="bv-pastille"><i></i>La librairie</span><h2>Choisissez <span class="b">votre ouvrage</span></h2><p>Touchez « Se procurer » pour acquérir un livre, ou « Découvrir » pour lire sa présentation.</p></div>
+    <div class="lo-liste">${LIVRES.map(l => `<article class="lo-item">
+      <a href="#livre-${l.slug}" class="lo-couv" tabindex="-1" aria-hidden="true"><img src="${mini(l)}" alt="" width="64" height="91" loading="lazy"></a>
+      <div class="lo-texte"><span class="lo-theme">${esc(l.theme)}</span><h3>${esc(l.titre)}</h3><p>${esc(resume(l))}</p>
+        <div class="lo-bas">${l.prix ? `<b class="num">${px(l.prix)}</b>` : ""}<div class="lo-actions"><button class="btn btn-principal btn-petit" type="button" data-procurer="${l.id}">Se procurer<span class="sr"> ${esc(l.titre)}</span></button><a class="btn btn-capsule btn-petit" href="#livre-${l.slug}">Découvrir</a></div></div>
+      </div></article>`).join("")}</div>
+    <button class="btn btn-capsule btn-petit lo-retour" type="button" data-lecture="${(CFG.vente.videos || []).findIndex(v => v.livre === "collection")}">Revoir la vidéo</button>
+  </div>`;
 }
 function blocVideos(filtreV, limite) {
   const v = (CFG.vente.videos || []).filter(x => x.fichier && (!filtreV || filtreV(x))).slice(0, limite || 99);
@@ -797,9 +812,18 @@ document.addEventListener("click", e => {
   const ag = e.target.closest("[data-agrandir]");
   if (ag) { const d = $("#visionneuse"); $("img", d).src = ag.dataset.agrandir; $("img", d).alt = $("img", ag).alt; try { d.showModal(); } catch (err) { d.setAttribute("open", ""); } return; }
   if (e.target.closest("[data-fermer]") || e.target.id === "visionneuse") { const d = $("#visionneuse"); try { d.close(); } catch (err) { d.removeAttribute("open"); } return; }
+  const lo = e.target.closest("[data-liste-ouvrages]");
+  if (lo) {
+    const d = $("#lecteur"); if (!d) return;
+    $$("video").forEach(v => v.pause());
+    $(".lecteur-corps", d).innerHTML = listeOuvrages(); d.classList.add("mode-liste");
+    if (!d.open) { try { d.showModal(); } catch (err) { d.setAttribute("open", ""); } }
+    $(".lecteur-corps", d).scrollTop = 0; mesure("liste_ouvrages", { canal: "video-collection" }); return;
+  }
   const lc = e.target.closest("[data-lecture]");
   if (lc) {
     const x = (CFG.vente.videos || [])[+lc.dataset.lecture], d = $("#lecteur"); if (!x || !d) return;
+    d.classList.remove("mode-liste");
     $(".lecteur-corps", d).innerHTML = carteVideo(x);
     $$(".revele", d).forEach(el => el.classList.add("vu"));
     try { d.showModal(); } catch (err) { d.setAttribute("open", ""); }
@@ -858,7 +882,7 @@ window.addEventListener("scroll", surDefilement, { passive: true }); surDefileme
 
 /* ---------- Chargement ---------- */
 vue.innerHTML = `<p class="chargement">Chargement de la bibliothèque…</p>`;
-Promise.all([fetch("data/livres.json?v=20261120d").then(r => r.json()), fetch("data/config.json?v=20261120d").then(r => r.json())])
+Promise.all([fetch("data/livres.json?v=20261120e").then(r => r.json()), fetch("data/config.json?v=20261120e").then(r => r.json())])
   .then(([l, c]) => {
     TOUS = l; LIVRES = l.filter(x => x.disponible !== false); CFG = c;
     THEMES = [...new Set(LIVRES.map(x => x.theme))];

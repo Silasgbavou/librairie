@@ -657,3 +657,24 @@ html.entree [data-enter="4"]{animation-delay:180ms}
 .lecteur[open]{animation:entree 280ms var(--ease)}
 @media (prefers-reduced-motion:reduce){.bv-pastille i{animation:none}}
 .lecteur .revele,.lecteur .carte-video{opacity:1!important;transform:none!important}
+
+/* Vidéo de la collection : liste des ouvrages dans le lecteur */
+.lecteur.mode-liste{width:min(94vw,640px)}
+.lecteur .lecteur-corps{max-height:92vh}
+.lecteur.mode-liste .lecteur-corps{overflow:auto;border-radius:var(--r-l);background:#fff;box-shadow:0 30px 60px rgba(0,0,0,.4)}
+.liste-ouvrages{padding:20px 16px 18px;display:grid;gap:14px}
+.lo-tete h2{font-size:clamp(22px,4vw,28px);margin-top:10px}
+.lo-tete p{font-size:14px;color:var(--texte-2);margin-top:6px}
+.lo-liste{display:grid;gap:10px}
+.lo-item{display:grid;grid-template-columns:64px minmax(0,1fr);gap:14px;padding:12px;border:1px solid var(--filet);border-radius:18px;background:linear-gradient(180deg,#fff,#FAFCFF);transition:box-shadow var(--t-moyen) ease,border-color var(--t-moyen) ease}
+@media(hover:hover){.lo-item:hover{box-shadow:var(--ombre);border-color:#BFD3EE}}
+.lo-couv img{width:64px;height:auto;border-radius:3px 6px 6px 3px;box-shadow:0 8px 16px -8px rgba(18,36,58,.5)}
+.lo-theme{font-size:11.5px;font-weight:800;color:var(--action);letter-spacing:.02em}
+.lo-texte h3{font-size:16px;line-height:1.25;margin-top:2px}
+.lo-texte p{font-size:13.5px;color:var(--texte-2);line-height:1.45;margin-top:4px}
+.lo-bas{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px 12px;margin-top:10px}
+.lo-bas>b{font-size:15px}
+.lo-actions{display:flex;gap:8px;flex-wrap:wrap}
+.lo-retour{justify-self:center}
+.lo-actions{flex-wrap:nowrap}.lo-actions .btn{padding-left:14px;padding-right:14px}
+@media(max-width:399px){.lo-item{grid-template-columns:52px minmax(0,1fr);gap:10px}.lo-couv img{width:52px}}
