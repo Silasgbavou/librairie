@@ -89,7 +89,7 @@
    "instructions": ""
   },
   "lienCollection": "",
-  "prixCollection": 55000,
+  "prixCollection": null,
   "devise": "XOF",
   "urlSite": "https://silasgbavou.github.io/librairie/",
   "videos": [
@@ -287,7 +287,39 @@
     "https://open.er-api.com/v6/latest/EUR"
    ],
    "cacheHeures": 12
-  }
+  },
+  "lots": [
+   {
+    "id": "lot10",
+    "nom": "La Grande Collection",
+    "ids": [
+     "02",
+     "08",
+     "10",
+     "14",
+     "07",
+     "04",
+     "01",
+     "13",
+     "06",
+     "09"
+    ],
+    "prix": 45000,
+    "lien": ""
+   },
+   {
+    "id": "lot4",
+    "nom": "La Collection Complémentaire",
+    "ids": [
+     "03",
+     "05",
+     "11",
+     "12"
+    ],
+    "prix": 15000,
+    "lien": ""
+   }
+  ]
  },
  "contacts": [
   {

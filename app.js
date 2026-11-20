@@ -326,15 +326,22 @@ function noteEditeur(court) {
   </aside>`;
 }
 function blocCollection() {
+  const lots = (CFG.vente.lots || []).map(L => ({ ...L, livres: L.ids.map(id => LIVRES.find(l => l.id === id)).filter(Boolean) })).filter(L => L.livres.length);
+  if (!lots.length) return "";
   return `<div class="collection">
     <div>
-      <span class="pastille-info"><i></i>Collection complète</span>
-      <h2 style="margin-top:16px">L'intégralité des ouvrages en une seule acquisition</h2>
-      <p style="margin:14px 0 18px">Pour les leaders, les écoles bibliques et les groupes d'étude qui veulent recevoir l'enseignement dans son ensemble.</p>
-      <div class="prix-collection"><p class="num">${CFG.vente.prixCollection ? px(CFG.vente.prixCollection) : "Prix sur demande"}</p>${selecteurDevise("devises-clair")}</div>
+      <span class="pastille-info"><i></i>Collections</span>
+      <h2 style="margin-top:16px">Recevez l'enseignement <span class="b-clair">par ensemble</span></h2>
+      <p style="margin:14px 0 6px">Pour les leaders, les écoles bibliques et les groupes d'étude qui veulent recevoir l'enseignement dans sa cohérence.</p>
+      <div class="prix-collection">${selecteurDevise("devises-clair")}</div>
       ${infoDevise()}
-      ${(() => { const t = LIVRES.reduce((s, l) => s + (l.prix || 0), 0); return CFG.vente.prixCollection && LIVRES.every(l => l.prix) ? `<p style="margin-bottom:20px;font-size:15px">Achetés séparément, les ${LIVRES.length} livres représentent ${px(t, "texte")}. La collection vous fait économiser ${px(t - CFG.vente.prixCollection, "texte")}.</p>` : `<div style="margin-bottom:20px"></div>`; })()}
-      <button class="btn btn-capsule btn-eclat" type="button" data-procurer="collection">Se procurer la collection</button>
+      <div class="lots">${lots.map(L => { const t = L.livres.reduce((s, l) => s + (l.prix || 0), 0); return `<article class="lot">
+        <div class="lot-tete"><div><b>${esc(L.nom)}</b><small>${L.livres.length} ouvrages en PDF</small></div><p class="lot-prix num">${px(L.prix)}</p></div>
+        <div class="lot-couvs" aria-hidden="true">${L.livres.map(l => `<img src="${mini(l)}" alt="" loading="lazy" width="42" height="60">`).join("")}</div>
+        <p class="lot-liste">${L.livres.map(l => esc(l.titre)).join(" · ")}</p>
+        ${t > L.prix ? `<p class="lot-eco">Achetés séparément : ${px(t, "texte")}. Économie : ${px(t - L.prix, "texte")}.</p>` : ""}
+        <button class="btn btn-capsule btn-eclat btn-petit" type="button" data-procurer="${L.id}">Se procurer cette collection</button>
+      </article>`; }).join("")}</div>
     </div>
     <div class="mur" aria-hidden="true">${LIVRES.map(l => `<img src="${mini(l)}" alt="" loading="lazy" width="420" height="595">`).join("")}</div>
   </div>`;
@@ -646,7 +653,7 @@ function pageCommande() {
           : a.map(l => `<div class="art"><img src="${mini(l)}" alt="" width="52" height="74"><div><b>${esc(l.titre)}</b><small>${l.prix ? px(l.prix) : "Prix sur demande"}</small></div><button class="retirer" type="button" data-retirer="${l.id}" aria-label="Retirer ${esc(l.titre)}">${IC.croix}</button></div>`).join("")}
         <div class="total"><span>Total</span>${t ? `<span class="num">${px(t)}</span>` : `<span class="inconnu">Sur demande</span>`}</div>
         ${infoDevise()}
-        <div class="actions" style="margin-top:16px">${panier.collection ? `<a class="btn btn-capsule btn-petit" href="#catalogue">Revenir au catalogue</a>` : `<a class="btn btn-capsule btn-petit" href="#catalogue">Ajouter un livre</a>${a.length < LIVRES.length ? `<button class="btn btn-contour btn-petit" type="button" data-collection>Prendre la collection complète</button>` : ""}`}</div>
+        <div class="actions" style="margin-top:16px">${panier.collection ? `<a class="btn btn-capsule btn-petit" href="#catalogue">Revenir au catalogue</a>` : `<a class="btn btn-capsule btn-petit" href="#catalogue">Ajouter un livre</a>`}</div>
       </div>
       <div class="panneau reglement">
         <h2>Règlement sécurisé</h2>
@@ -787,6 +794,11 @@ function ouvrir(url, canal) {
 }
 function enLigneActif() { const p = CFG.vente.paiementEnLigne || {}; return p.actif && p.verifie; }
 function procurer(id) {
+  const lot = (CFG.vente.lots || []).find(L => L.id === id);
+  if (lot) {
+    if (enLigneActif() && lot.lien && ouvrir(lot.lien, "paiement-" + lot.id)) { toast("Ouverture de la page de paiement sécurisée"); return; }
+    ouvrir(lienAssistance(`je souhaite acquérir ${lot.nom} (${lot.ids.length} ouvrages).`), "assistance-" + lot.id); return;
+  }
   if (id === "collection") {
     if (enLigneActif() && CFG.vente.lienCollection && ouvrir(CFG.vente.lienCollection, "paiement-collection")) { toast("Ouverture de la page de paiement sécurisée"); return; }
     choisirCollection(); location.hash === "#commande" ? router() : (location.hash = "commande"); return;
@@ -882,7 +894,7 @@ window.addEventListener("scroll", surDefilement, { passive: true }); surDefileme
 
 /* ---------- Chargement ---------- */
 vue.innerHTML = `<p class="chargement">Chargement de la bibliothèque…</p>`;
-Promise.all([fetch("data/livres.json?v=20261120f").then(r => r.json()), fetch("data/config.json?v=20261120f").then(r => r.json())])
+Promise.all([fetch("data/livres.json?v=20261120g").then(r => r.json()), fetch("data/config.json?v=20261120g").then(r => r.json())])
   .then(([l, c]) => {
     TOUS = l; LIVRES = l.filter(x => x.disponible !== false); CFG = c;
     THEMES = [...new Set(LIVRES.map(x => x.theme))];

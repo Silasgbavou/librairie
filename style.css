@@ -678,3 +678,18 @@ html.entree [data-enter="4"]{animation-delay:180ms}
 .lo-retour{justify-self:center}
 .lo-actions{flex-wrap:nowrap}.lo-actions .btn{padding-left:14px;padding-right:14px}
 @media(max-width:399px){.lo-item{grid-template-columns:52px minmax(0,1fr);gap:10px}.lo-couv img{width:52px}}
+
+/* Collections (lots) */
+.b-clair{color:#BFE6F6}
+.lots{display:grid;gap:14px;margin-top:8px}
+.lot{display:grid;gap:10px;padding:16px;border-radius:20px;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.28);box-shadow:inset 0 1px 0 rgba(255,255,255,.18)}
+.lot-tete{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap}
+.lot-tete b{display:block;font-size:19px;font-weight:800;line-height:1.2}
+.lot-tete small{display:block;font-size:13px;font-weight:700;color:#CFEFFF;margin-top:2px}
+.lot-prix{font-size:22px;font-weight:800}
+.lot-prix .px-ref{color:rgba(255,255,255,.8)}
+.lot-couvs{display:flex;gap:5px;flex-wrap:wrap}
+.lot-couvs img{width:30px;height:auto;border-radius:2px 4px 4px 2px;box-shadow:0 4px 10px rgba(0,0,0,.3)}
+.lot-liste{font-size:13px;line-height:1.5;color:rgba(255,255,255,.86)}
+.lot-eco{font-size:14px;font-weight:600}
+.lot .btn{justify-self:start}
