@@ -376,7 +376,7 @@ const enTete = (pastille, titre, chapeau) => `<span class="pastille-info"><i></i
 /* ---------- Pages ---------- */
 function pageAccueil() {
   const A = CFG.auteur;
-  const pile = ["08", "01", "10"].map(id => LIVRES.find(l => l.id === id)).filter(Boolean);
+  const pile = ["07", "08", "01", "10", "06"].map(id => LIVRES.find(l => l.id === id)).filter(Boolean);
   const choix = ["01", "08", "06", "13"].map(id => LIVRES.find(l => l.id === id)).filter(Boolean);
   const pages = LIVRES.reduce((s, l) => s + (l.pages || 0), 0).toLocaleString("fr-FR").replace(/ | /g, " ");
   return `
@@ -401,8 +401,23 @@ function pageAccueil() {
         <figcaption><img src="${esc(A.photoBuste)}" alt="" width="54" height="54"><span><b>Docteur B. Silas Gbavou</b>Enseignant de la Parole de Dieu et scribe prophétique</span></figcaption>
       </figure>
     </div>
-    <div class="vitrine" aria-hidden="true" data-enter="3"><div class="halo"></div>${pile.map(l => livre3d(l, true)).join("")}<span class="etiquette">Providence Éditions Prestige</span></div>
-  </div>${vagues}</section>
+    <div class="vitrine" aria-hidden="true"><div class="vt-lumiere"></div>
+      <div class="vt-scene">
+        <svg class="vt-socle" viewBox="0 0 600 120" preserveAspectRatio="none">
+          <defs>
+            <linearGradient id="vtDessus" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#F9FBFF"/><stop offset=".6" stop-color="#EDF3FC"/><stop offset="1" stop-color="#DCE7F7"/></linearGradient>
+            <linearGradient id="vtTranche" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#DCE7F7"/><stop offset="1" stop-color="#B9CCE8"/></linearGradient>
+            <linearGradient id="vtReflet" x1="0" x2="1"><stop offset="0" stop-color="#fff" stop-opacity="0"/><stop offset=".5" stop-color="#fff" stop-opacity=".95"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></linearGradient>
+          </defs>
+          <path d="M92 14 H508 Q526 14 538 26 L582 70 Q590 78 578 78 H22 Q10 78 18 70 L62 26 Q74 14 92 14Z" fill="url(#vtDessus)"/>
+          <path d="M22 78 H578 Q588 78 588 88 V96 Q588 106 576 106 H24 Q12 106 12 96 V88 Q12 78 22 78Z" fill="url(#vtTranche)"/>
+          <path d="M30 78.6 H570" stroke="url(#vtReflet)" stroke-width="1.6"/>
+        </svg>
+        ${pile.map((l, i) => `<div class="vt-livre vt-${i + 1}"><span class="vt-ombre"></span><div class="vt-flotte">${livre3d(l, true)}</div></div>`).join("")}
+      </div>
+      <p class="vt-signature"><span>Providence Éditions Prestige</span></p>
+    </div>
+  </div></section>
 
   ${bandeVideos()}
 
@@ -922,7 +937,7 @@ window.addEventListener("scroll", surDefilement, { passive: true }); surDefileme
 
 /* ---------- Chargement ---------- */
 vue.innerHTML = `<p class="chargement">Chargement de la bibliothèque…</p>`;
-Promise.all([fetch("data/livres.json?v=20261120r").then(r => r.json()), fetch("data/config.json?v=20261120r").then(r => r.json())])
+Promise.all([fetch("data/livres.json?v=20261120x").then(r => r.json()), fetch("data/config.json?v=20261120x").then(r => r.json())])
   .then(([l, c]) => {
     TOUS = l; LIVRES = l.filter(x => x.disponible !== false); CFG = c;
     THEMES = [...new Set(LIVRES.map(x => x.theme))];
@@ -942,4 +957,16 @@ Promise.all([fetch("data/livres.json?v=20261120r").then(r => r.json()), fetch("d
   const maj = () => { f = 0; const h = document.documentElement, max = h.scrollHeight - innerHeight; b.style.setProperty("--prog", max > 0 ? Math.min(1, scrollY / max) : 0); };
   addEventListener("scroll", () => { if (!f) f = requestAnimationFrame(maj); }, { passive: true });
   addEventListener("resize", maj); maj();
+})();
+
+/* Vitrine 3D : profondeur au survol (ordinateur) */
+(() => {
+  if (!matchMedia("(hover:hover) and (pointer:fine)").matches) return;
+  let f = 0;
+  document.addEventListener("pointermove", e => {
+    const v = e.target.closest && e.target.closest(".vitrine"); if (!v || matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    if (f) return; f = requestAnimationFrame(() => { f = 0; const r = v.getBoundingClientRect();
+      v.style.setProperty("--mx", ((e.clientX - r.left) / r.width - .5).toFixed(3)); v.style.setProperty("--my", ((e.clientY - r.top) / r.height - .5).toFixed(3)); });
+  });
+  document.addEventListener("pointerout", e => { const v = e.target.closest && e.target.closest(".vitrine"); if (v && !v.contains(e.relatedTarget)) { v.style.setProperty("--mx", 0); v.style.setProperty("--my", 0); } });
 })();
