@@ -307,21 +307,21 @@ function blocVideos(filtreV, limite) {
 
 /* Note de l'éditeur : nature contributive des montants */
 function noteEditeur(court) {
-  if (court) return `<p class="note-editeur court"><b>NB.</b> Montants fixés au coût de production, sans marge commerciale, pour soutenir l'œuvre d'édition.</p>`;
+  if (court) return `<p class="note-editeur court"><b>NB.</b> Montant inférieur au coût de production : chaque livre est un cadeau, reçu avec un geste de soutien à l'œuvre d'édition.</p>`;
   return `<aside class="note-editeur revele" aria-labelledby="nb-titre">
     <div class="ne-texte">
       <span class="pastille-info"><i></i>Note de l'éditeur</span>
-      <h2 id="nb-titre">Une œuvre d'édition, <span class="b">non une démarche lucrative</span></h2>
-      <p>Ces ouvrages ne sont pas publiés dans un but commercial. Ils sont mis à disposition au coût de production, sans marge bénéficiaire.</p>
-      <p>Chaque livre engage pourtant des dépenses importantes : rédaction, relecture doctrinale, correction, mise en page, conception graphique et diffusion. La contribution demandée reste modeste au regard de cet investissement ; elle en couvre une part et permet la publication des ouvrages à venir.</p>
+      <h2 id="nb-titre">Un cadeau, <span class="b">reçu avec un geste de soutien</span></h2>
+      <p>Ces ouvrages ne sont pas publiés dans un but lucratif. Le montant demandé pour chaque livre reste même inférieur à son coût réel de production en PDF : il n'en couvre qu'une partie.</p>
+      <p>Chaque titre engage en effet des dépenses importantes : rédaction, relecture doctrinale, correction, mise en page, conception graphique et diffusion. Puisque le prix n'atteint pas ce coût, chaque livre est d'abord un cadeau offert au lecteur. Et parce que toute œuvre a un coût, ce cadeau se reçoit avec un geste de soutien : votre contribution permet à la maison d'édition de faire avancer la publication des ouvrages à venir.</p>
       <p>Chacun demeure libre d'aller au-delà de ce montant, dans l'esprit de la Parole :</p>
       <blockquote>« Que chacun donne comme il l'a résolu en son cœur, sans tristesse ni contrainte ; car Dieu aime celui qui donne avec joie. »<cite>2 Corinthiens 9:7</cite></blockquote>
       <a class="btn btn-capsule btn-petit" target="_blank" rel="noopener" data-sortie="soutien" href="${wa(CFG.vente.whatsappCommandes, "Bonjour Providence Éditions Prestige, je souhaite soutenir l'œuvre d'édition des livres du Docteur B. Silas Gbavou.")}">Soutenir l'œuvre d'édition</a>
     </div>
     <ul class="ne-reperes" aria-label="En résumé">
-      <li><span class="pe-ico">${IC.piece}</span><b>Au coût de production</b><span>Rédaction, relecture, mise en page, conception, diffusion.</span></li>
-      <li><span class="pe-ico">${IC.bouclier}</span><b>Sans marge bénéficiaire</b><span>Aucun profit commercial n'est recherché.</span></li>
-      <li><span class="pe-ico">${IC.livreOuvert}</span><b>Pour les ouvrages à venir</b><span>Chaque contribution soutient la suite de l'œuvre.</span></li>
+      <li><span class="pe-ico">${IC.piece}</span><b>En deçà du coût de production</b><span>Le prix ne couvre qu'une part des frais d'édition.</span></li>
+      <li><span class="pe-ico">${IC.bouclier}</span><b>Un cadeau, sans but lucratif</b><span>Aucun profit commercial n'est recherché.</span></li>
+      <li><span class="pe-ico">${IC.livreOuvert}</span><b>Un geste de soutien</b><span>Chaque contribution fait avancer l'œuvre d'édition.</span></li>
     </ul>
   </aside>`;
 }
@@ -578,7 +578,7 @@ function pageConditions() {
     <h2>Ce que vous achetez</h2>
     <p>Des livres numériques au format PDF, pour un usage personnel. Chaque fiche indique le nombre de pages et le format du livre.</p>
     <h2>Nature des montants</h2>
-    <p>Les montants sont fixés au coût de production, sans marge commerciale, afin de soutenir la publication des prochains ouvrages.</p>
+    <p>Les montants restent inférieurs au coût de production des ouvrages. Chaque livre est ainsi offert comme un cadeau, reçu avec une contribution qui soutient la publication des prochains ouvrages.</p>
     <h2>Paiement</h2>
     <p>Le règlement s'effectue en ligne, en FCFA, sur notre page de paiement sécurisée : Mobile Money ou carte bancaire. Les équivalences en euros ou en dollars affichées sur le site sont indicatives.</p>
     <h2>Conclusion de l'acquisition</h2>
@@ -668,7 +668,7 @@ function faq() {
     ["Sous quel format sont les livres ?", "En PDF, lisible sur téléphone Android ou iPhone, tablette ou ordinateur, sans application payante."],
     ["Quel est le prix ?", "Chaque fiche affiche son montant officiel en FCFA. Le sélecteur FCFA, € ou $ donne une équivalence indicative ; le règlement s'effectue toujours en FCFA."],
     ["Comment acheter un livre ?", "Touchez « Se procurer » : la page de paiement sécurisée s'ouvre (Mobile Money ou carte bancaire) et le PDF vous est remis automatiquement après le règlement."],
-    ["Pourquoi ces montants ?", "Ils sont fixés au coût de production, sans marge commerciale, pour soutenir la publication des prochains ouvrages."],
+    ["Pourquoi ces montants ?", "Ils restent inférieurs au coût de production des livres. Chaque ouvrage est donc un cadeau, que le lecteur reçoit avec un geste de soutien à la maison d'édition pour les publications à venir."],
     ["Puis-je régler depuis l'étranger ?", "Oui, par carte bancaire. Le montant est prélevé en FCFA ; si votre carte est en euros ou en dollars, votre banque effectue la conversion."],
     ["Quand vais-je recevoir mon livre ?", "Automatiquement, dès la confirmation du paiement."],
     ["Puis-je partager mon PDF ?", "Non. Chaque livre est protégé par le droit d'auteur : toute reproduction ou revente sans l'autorisation écrite de l'auteur est interdite."],
@@ -882,7 +882,7 @@ window.addEventListener("scroll", surDefilement, { passive: true }); surDefileme
 
 /* ---------- Chargement ---------- */
 vue.innerHTML = `<p class="chargement">Chargement de la bibliothèque…</p>`;
-Promise.all([fetch("data/livres.json?v=20261120e").then(r => r.json()), fetch("data/config.json?v=20261120e").then(r => r.json())])
+Promise.all([fetch("data/livres.json?v=20261120f").then(r => r.json()), fetch("data/config.json?v=20261120f").then(r => r.json())])
   .then(([l, c]) => {
     TOUS = l; LIVRES = l.filter(x => x.disponible !== false); CFG = c;
     THEMES = [...new Set(LIVRES.map(x => x.theme))];
