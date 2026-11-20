@@ -91,7 +91,7 @@
   "lienCollection": "",
   "prixCollection": null,
   "devise": "XOF",
-  "urlSite": "https://silasgbavou.github.io/librairie/",
+  "urlSite": "https://providenceeditions.github.io/",
   "videos": [
    {
     "livre": "vase-d-or",
@@ -263,7 +263,7 @@
    }
   ],
   "deviseAffichee": "FCFA",
-  "urlCanonique": "https://silasgbavou.github.io/librairie/",
+  "urlCanonique": "https://providenceeditions.github.io/",
   "paiementEnLigne": {
    "actif": true,
    "prestataire": "Maketou",

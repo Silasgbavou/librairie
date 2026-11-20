@@ -19,7 +19,7 @@ from datetime import date
 from pathlib import Path
 
 RACINE = Path(__file__).resolve().parent.parent
-BASE_PAR_DEFAUT = "https://silasgbavou.github.io/librairie/"
+BASE_PAR_DEFAUT = "https://providenceeditions.github.io/"
 
 
 def lire(nom):
