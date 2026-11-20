@@ -742,3 +742,23 @@ del .px-ref{display:none}
 .hero-texte p:last-child{margin-bottom:0}
 .hero-texte .hero-acces{color:var(--action);font-weight:700}
 .hero .atouts{margin-bottom:24px}
+/* Passage vers le paiement */
+.passage{border:0;padding:0;background:transparent;width:min(94vw,440px);max-height:94vh;margin:auto;overflow:visible}
+.passage::backdrop{background:rgba(9,20,40,.72);-webkit-backdrop-filter:blur(4px);backdrop-filter:blur(4px)}
+.passage-carte{position:relative;background:#fff;border-radius:24px;padding:24px 22px 16px;box-shadow:0 30px 60px -20px rgba(0,10,40,.6);border-top:5px solid var(--action);display:flex;flex-direction:column}
+.passage .fermer{position:absolute;top:10px;right:10px;width:40px;height:40px;border-radius:50%;border:0;background:var(--fond);color:var(--texte);font-size:24px;line-height:1;cursor:pointer}
+.passage-sur{align-self:flex-start;font-size:11.5px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--action);background:var(--fond);padding:5px 10px;border-radius:999px}
+.passage h2{font-size:22px;margin:12px 0 14px}
+.passage-article{display:flex;gap:14px;align-items:center;padding:12px;border:1px solid var(--filet);border-radius:16px;background:linear-gradient(180deg,#fff,#F4F8FF);margin-bottom:18px}
+.passage-article img{width:52px;height:74px;object-fit:cover;border-radius:6px;box-shadow:0 6px 14px -6px rgba(0,0,40,.5);flex:none}
+.passage-article b{display:block;font-size:15px;line-height:1.35;color:var(--texte)}
+.passage-article span{display:block;margin-top:4px;font-weight:800;color:var(--action);font-size:16px}
+.passage label{font-weight:700;font-size:14.5px;color:var(--texte);margin-bottom:8px}
+.passage label small{font-weight:600;color:var(--texte-2)}
+.passage input{width:100%;min-height:50px;border:1.5px solid var(--filet);border-radius:14px;padding:0 14px;font:inherit;font-size:16px;color:var(--texte);background:#fff;transition:border-color .2s,box-shadow .2s}
+.passage input:focus{outline:0;border-color:var(--action);box-shadow:0 0 0 4px rgba(24,80,208,.14)}
+.passage input[aria-invalid=true]{border-color:#C0392B}
+.passage-note{font-size:13px;color:var(--texte-2);line-height:1.5;margin:8px 0 0}
+.passage-erreur{font-size:13px;color:#B03A2E;font-weight:700;margin:6px 0 0}
+.passage-go{margin-top:18px;width:100%;justify-content:center}
+.passage-annuler{margin-top:6px;min-height:44px;border:0;background:none;color:var(--texte-2);font:inherit;font-weight:700;font-size:14px;cursor:pointer}
