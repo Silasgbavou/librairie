@@ -484,7 +484,7 @@ function blocNouveautes() {
   </div>`;
 }
 let filtre = "Tous", recherche = "";
-const normal = s => s.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "");
+const normal = s => s.toLowerCase().replace(/œ/g, "oe").replace(/æ/g, "ae").normalize("NFD").replace(/[̀-ͯ]/g, "");
 /* Catalogue : filtre par thème (la barre de recherche a été retirée). */
 const MOTS_VIDES = new Set(["de", "la", "le", "les", "du", "des", "et", "d", "l", "un", "une", "au", "aux", "en", "sur", "pour", "livre", "livres"]);
 const indexLivre = l => normal([l.titre, l.sous, l.theme, ...(l.auteurs || []), ...(l.motsCles || []), ...(l.cles || []), ...(l.description || []), ...(l.chapitres || [])].join(" ").replace(/[’']/g, " "));
@@ -508,6 +508,9 @@ const BESOINS = [
   { id: "intercession", nom: "Intercession et mouvements de Dieu", dit: "intercéder pour engendrer et activer les mouvements de Dieu dans une atmosphère spirituelle",
     mots: ["intercession", "interceder", "intercede", "intercesseur", "prier pour", "prier en faveur", "porter dans la priere", "fardeau", "enfanter", "enfantement", "engendrer", "mouvement de dieu", "mouvements de dieu", "nouveau mouvement", "reveil", "atmosphere", "climat spirituel", "distorsion", "debloquer", "ouvrir les cieux", "gloire", "visitation", "deplacement de dieu", "manifester dieu", "chaine de priere", "groupe de priere", "cellule de priere", "veiller pour"],
     livres: ["09", "11", "08"] },
+  { id: "spiritualite", nom: "La haute spiritualité", dit: "comprendre la spiritualité, le monde spirituel et le fonctionnement des lois spirituelles",
+    mots: ["spiritualite", "spirituel", "spirituelle", "spirituels", "monde spirituel", "regne de l esprit", "regne spirituel", "lois spirituelles", "loi spirituelle", "royaume invisible", "dimension spirituelle", "realites spirituelles", "mystere", "mysteres", "haute spiritualite", "niveau spirituel", "fonctionnement spirituel", "comment fonctionne le monde"],
+    livres: ["06", "05", "02"] },
   { id: "prophetique", nom: "Comprendre le prophétique", dit: "comprendre le prophétique et la voix de Dieu",
     mots: ["prophet", "prophetie", "vision", "reve", "songe", "voix de dieu", "entendre dieu", "dieu me parle", "revelation", "discern", "voyant", "message de dieu"],
     livres: ["08", "10", "01"] },
@@ -558,7 +561,10 @@ const PROFILS = [
   { id: "tout", nom: "Je veux toute la collection", mots: ["tout", "toute la collection", "tous les livres", "collection complete", "les 14", "tous"] },
   { id: "offrir", nom: "Offrir un livre", mots: ["offrir", "cadeau", "anniversaire", "pour mon pasteur", "pour un ami", "pour ma femme", "pour mon mari"] }
 ];
-let besoinChoisi = "", texteAssistant = "";
+let besoinChoisi = "", texteAssistant = "", LEXIQUE = null;
+fetch("data/concepts.json?v=20261121j").then(r => r.json()).then(d => { LEXIQUE = d; if (texteAssistant.trim()) majAssistant(false); }).catch(() => {});
+/* Propositions affichées : une sélection différente à chaque visite. */
+const PROPOSITIONS = (() => { const a = BESOINS.map(b => b.id); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a.slice(0, 8); })();
 const prep = t => " " + normal(t || "").replace(/[’'ʼ]/g, " ").replace(/[^a-z0-9-]+/g, " ").replace(/\s+/g, " ") + " ";
 const touche = (t, m) => m.endsWith(" ") ? t.includes(" " + m) : t.includes(" " + m) || (m.length >= 5 && t.includes(m));
 const livreDispo = id => LIVRES.find(l => l.id === id);
@@ -568,15 +574,29 @@ function comprendre(phrase) {
   const besoins = BESOINS.map(b => ({ b, n: b.mots.filter(m => touche(t, m)).length })).filter(x => x.n).sort((a, b) => b.n - a.n);
   const profil = PROFILS.find(p => p.mots.some(m => t.includes(" " + m + " ")));
   const score = {};
-  besoins.forEach(({ b, n }, rang) => b.livres.forEach((id, k) => { score[id] = (score[id] || 0) + n * (3 - k) * (rang ? 0.6 : 1); }));
+  besoins.forEach(({ b, n }, rang) => b.livres.forEach((id, k) => { score[id] = (score[id] || 0) + (6 + 2 * Math.min(n, 3)) * (3 - k) * (rang ? 0.6 : 1); }));
   LIVRES.forEach(l => {
     if (t.includes(prep(l.titre).trim())) score[l.id] = (score[l.id] || 0) + 20;
-    (l.motsCles || []).forEach(k => { const p = prep(k).trim(); if (p.length > 4 && t.includes(" " + p + " ")) score[l.id] = (score[l.id] || 0) + 2; });
+    (l.motsCles || []).forEach(k => { const p = prep(k).trim(); if (p.length > 4 && t.includes(" " + p + " ")) score[l.id] = (score[l.id] || 0) + (p.includes(" ") ? 14 : 4); });
   });
   /* « Prière » sans précision : on présente les deux livres de prière, chacun pour ce qu'il traite. */
   if (/ (prier|priere|prieres|prie) /.test(t) && !besoins.some(x => x.b.id === "priere" || x.b.id === "intercession")) {
     score["06"] = (score["06"] || 0) + 6; score["09"] = (score["09"] || 0) + 5; besoins.unshift({ b: { dit: "approfondir la prière (prière personnelle ou intercession)" }, n: 1 });
   }
+  /* Lexique doctrinal tiré du texte intégral des livres (data/concepts.json). */
+  if (LEXIQUE) {
+    const vus = new Set();
+    let fort = false;
+    const ajoute = (table, coef) => { for (const k in table) { if (vus.has(k) || !t.includes(" " + k + " ") && !(k.length >= 6 && !k.includes(" ") && (t.includes(" " + k + "s ") || (k.endsWith("s") && t.includes(" " + k.slice(0, -1) + " "))))) continue; vus.add(k); const nb = k.split(" ").length; for (const id in table[k]) score[id] = (score[id] || 0) + table[k][id] * coef * (nb > 1 ? 1.4 : 1) + (fort && nb > 1 ? 12 + 6 * (nb - 2) : 0); } };
+    ajoute(LEXIQUE.doctrines || {}, 0.7);
+    fort = true; ajoute(LEXIQUE.termes || {}, 1.6);
+  }
+  /* Fiches des livres : titre, sous-titre, mots-clés, points clés et chapitres. */
+  const motsLecteur = t.trim().split(" ").filter(w => w.length >= 5 && !MOTS_VIDES.has(w));
+  LIVRES.forEach(l => {
+    const fiche = prep([l.titre, l.sous, ...(l.motsCles || []), ...(l.cles || []), ...(l.chapitres || [])].join(" "));
+    motsLecteur.forEach(w => { if (fiche.includes(" " + w + " ") || (w.length >= 7 && fiche.includes(" " + w.slice(0, -1)))) score[l.id] = (score[l.id] || 0) + 1.5; });
+  });
   const livres = Object.entries(score).filter(([id]) => livreDispo(id)).sort((a, b) => b[1] - a[1]).map(([id]) => livreDispo(id));
   return { besoins: besoins.slice(0, 2).map(x => x.b), livres: livres.slice(0, 3), profil };
 }
@@ -614,7 +634,7 @@ function reponseAssistant() {
   } else if (texteAssistant.trim()) {
     const c = comprendre(texteAssistant); reco = c.livres; profil = c.profil;
     if (c.besoins.length) intro = `Besoin identifié : ${c.besoins.map(b => b.dit).join(", et aussi ")}. Voici les ouvrages qui y répondent :`;
-    else if (reco.length) intro = "Voici les ouvrages qui répondent le mieux à votre demande :";
+    else if (reco.length) intro = "Sujet identifié dans votre demande. Voici les ouvrages qui le traitent :";
     if (profil && profil.id === "offrir" && reco.length) intro = "Ouvrages recommandés pour votre cadeau :";
   }
   if (profil && profil.id === "tout") return `<p class="assistant-intro">Vous souhaitez lire tout l'enseignement du Docteur B. Silas Gbavou : la collection complète est la meilleure solution.</p>${propositionCollection([])}`;
@@ -635,7 +655,7 @@ function blocAssistant() {
       <button type="submit" class="btn btn-principal">Trouver mes ouvrages</button>
     </form>
     <p class="aide-ou">Ou sélectionnez un besoin :</p>
-    <div class="besoins" role="group" aria-label="Ce que vous cherchez">${BESOINS.map(b => `<button type="button" class="besoin" data-besoin="${b.id}" aria-pressed="${b.id === besoinChoisi}">${esc(b.nom)}</button>`).join("")}<button type="button" class="besoin" data-besoin="tout" aria-pressed="false">Toute la collection</button></div>
+    <div class="besoins" role="group" aria-label="Ce que vous cherchez">${BESOINS.filter(b => PROPOSITIONS.includes(b.id) || b.id === besoinChoisi).map(b => `<button type="button" class="besoin" data-besoin="${b.id}" aria-pressed="${b.id === besoinChoisi}">${esc(b.nom)}</button>`).join("")}<button type="button" class="besoin" data-besoin="tout" aria-pressed="false">Toute la collection</button></div>
     <div class="assistant-reponse" id="assistant-reponse" aria-live="polite">${reponseAssistant()}</div>
   </aside>`;
 }
@@ -1115,7 +1135,7 @@ window.addEventListener("scroll", surDefilement, { passive: true }); surDefileme
 
 /* ---------- Chargement ---------- */
 vue.innerHTML = `<p class="chargement">Chargement de la bibliothèque…</p>`;
-Promise.all([fetch("data/livres.json?v=20261121i", { cache: "no-cache" }).then(r => r.json()), fetch("data/config.json?v=20261121i", { cache: "no-cache" }).then(r => r.json())])
+Promise.all([fetch("data/livres.json?v=20261121j", { cache: "no-cache" }).then(r => r.json()), fetch("data/config.json?v=20261121j", { cache: "no-cache" }).then(r => r.json())])
   .then(([l, c]) => {
     /* Tolérance aux fiches saisies depuis la plateforme de gestion */
     const sl = t => String(t || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
