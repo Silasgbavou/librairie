@@ -656,3 +656,4 @@ html.entree [data-enter="4"]{animation-delay:180ms}
 .lecteur .fermer{position:absolute;top:-16px;right:-8px;width:44px;height:44px;border-radius:50%;border:0;background:#fff;color:var(--texte);font-size:26px;cursor:pointer;box-shadow:var(--ombre-haute);z-index:5}
 .lecteur[open]{animation:entree 280ms var(--ease)}
 @media (prefers-reduced-motion:reduce){.bv-pastille i{animation:none}}
+.lecteur .revele,.lecteur .carte-video{opacity:1!important;transform:none!important}

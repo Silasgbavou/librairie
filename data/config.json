@@ -99,7 +99,7 @@
     "affiche": "videos/vase-d-or-presentation.jpg",
     "type": "Présentation",
     "titre": "Présentation officielle de l'ouvrage",
-    "format": "horizontal"
+    "format": "vertical"
    },
    {
     "livre": "heritage-des-saints",

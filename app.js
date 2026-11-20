@@ -801,6 +801,7 @@ document.addEventListener("click", e => {
   if (lc) {
     const x = (CFG.vente.videos || [])[+lc.dataset.lecture], d = $("#lecteur"); if (!x || !d) return;
     $(".lecteur-corps", d).innerHTML = carteVideo(x);
+    $$(".revele", d).forEach(el => el.classList.add("vu"));
     try { d.showModal(); } catch (err) { d.setAttribute("open", ""); }
     const v = $("video", d); if (v) { v.preload = "auto"; v.play().catch(() => {}); }
     mesure("video_ouverte", { livre: x.livre }); return;
@@ -857,7 +858,7 @@ window.addEventListener("scroll", surDefilement, { passive: true }); surDefileme
 
 /* ---------- Chargement ---------- */
 vue.innerHTML = `<p class="chargement">Chargement de la bibliothèque…</p>`;
-Promise.all([fetch("data/livres.json?v=20261120c").then(r => r.json()), fetch("data/config.json?v=20261120c").then(r => r.json())])
+Promise.all([fetch("data/livres.json?v=20261120d").then(r => r.json()), fetch("data/config.json?v=20261120d").then(r => r.json())])
   .then(([l, c]) => {
     TOUS = l; LIVRES = l.filter(x => x.disponible !== false); CFG = c;
     THEMES = [...new Set(LIVRES.map(x => x.theme))];
