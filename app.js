@@ -485,27 +485,67 @@ function blocNouveautes() {
 }
 let filtre = "Tous", recherche = "";
 const normal = s => s.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "");
+/* Recherche : titre, thème, sujets traités, présentation et chapitres ; sans accents ; tous les mots demandés. */
+const MOTS_VIDES = new Set(["de", "la", "le", "les", "du", "des", "et", "d", "l", "un", "une", "au", "aux", "en", "sur", "pour", "livre", "livres"]);
+const indexLivre = l => normal([l.titre, l.sous, l.theme, ...(l.auteurs || []), ...(l.motsCles || []), ...(l.cles || []), ...(l.description || []), ...(l.chapitres || [])].join(" ").replace(/[’']/g, " "));
 function listeFiltree() {
-  const q = normal(recherche.trim());
-  return LIVRES.filter(l => (filtre === "Tous" || l.theme === filtre) && (!q || normal([l.titre, l.sous, l.theme, ...(l.cles || [])].join(" ")).includes(q)));
+  const mots = normal(recherche.trim()).replace(/[’']/g, " ").split(/[^a-z0-9]+/).filter(m => m.length > 1 && !MOTS_VIDES.has(m));
+  return LIVRES.filter(l => (filtre === "Tous" || l.theme === filtre) && (!mots.length || ((i) => mots.every(m => i.includes(m)))(indexLivre(l))));
 }
+/* Sujets proposés : uniquement des sujets réellement traités par au moins un livre. */
+const SUJETS = ["onction", "mouvement prophétique", "prière", "intercession", "fin des temps", "fils de Dieu", "anges", "nuée des témoins", "royaume de Dieu", "délivrance", "Saint-Esprit", "cinq ministères", "ministère de la Parole", "présence de Dieu"];
+const sujetsUtiles = () => SUJETS.filter(t => { const m = normal(t).split(/[^a-z0-9]+/).filter(x => x.length > 1 && !MOTS_VIDES.has(x)); return LIVRES.some(l => m.every(x => indexLivre(l).includes(x))); });
 function grilleCatalogue() {
   const liste = listeFiltree();
   return liste.length ? liste.map(l => carte(l, "h2")).join("") : `<p class="chapeau" style="grid-column:1/-1">Aucun livre ne correspond. <button class="btn btn-capsule btn-petit" type="button" data-reinit>Tout afficher</button></p>`;
 }
-const texteResultat = () => { const n = listeFiltree().length; return `${n} ${n > 1 ? "livres" : "livre"}${filtre !== "Tous" ? " · " + filtre : ""}`; };
+const texteResultat = () => { const n = listeFiltree().length; return `${n} ${n > 1 ? "livres" : "livre"}${recherche.trim() ? ` pour « ${recherche.trim()} »` : ""}${filtre !== "Tous" ? " · " + filtre : ""}`; };
+/* Assistant bibliothécaire : besoins du lecteur → livres qui traitent réellement ces sujets. */
+const BESOINS = [
+  { id: "priere", nom: "Grandir dans la prière", mots: ["priere", "intercession", "intercesseur"] },
+  { id: "prophetique", nom: "Comprendre le prophétique", mots: ["prophetique", "prophete", "prophetie"] },
+  { id: "onction", nom: "Recevoir et garder l'onction", mots: ["onction", "manteau", "oint"] },
+  { id: "identite", nom: "Connaître mon identité en Christ", mots: ["fils de dieu", "filiation", "heritage", "identite"] },
+  { id: "ministere", nom: "Servir dans le ministère", mots: ["ministere", "predication", "apotre"] },
+  { id: "fin", nom: "Comprendre la fin des temps", mots: ["fin des temps", "eschatologie", "enlevement"] },
+  { id: "delivrance", nom: "Délivrance et rédemption", mots: ["redemption", "delivrance", "autels"] },
+  { id: "royaume", nom: "Le Royaume et la puissance", mots: ["royaume", "puissance", "territoire"] },
+  { id: "esprit", nom: "Le Saint-Esprit et le surnaturel", mots: ["saint-esprit", "ruach", "surnaturel", "esprit"] },
+  { id: "presence", nom: "Les anges et le monde invisible", mots: ["anges", "nuee des temoins", "monde invisible"] }
+];
+let besoinChoisi = "";
+function recommandations(b) {
+  const B = BESOINS.find(x => x.id === b); if (!B) return [];
+  return LIVRES.map(l => {
+    const titre = normal([l.titre, l.sous].join(" ")), theme = normal(l.theme || ""), mc = (l.motsCles || []).map(normal), d = indexLivre(l);
+    const score = B.mots.reduce((s, m) => s + (titre.includes(m) ? 6 : 0) + (theme.includes(m) ? 3 : 0) + 2 * mc.filter(k => k.includes(m)).length + (d.split(m).length - 1 > 3 ? 1 : 0), 0);
+    return { l, score };
+  }).filter(x => x.score >= 3).sort((a, b) => b.score - a.score).slice(0, 3).map(x => x.l);
+}
+function blocAssistant() {
+  const reco = recommandations(besoinChoisi);
+  const pourquoi = l => { const d = (l.description || [])[0] || ""; const p = d.split(/(?<=[.!?])\s/)[0]; return p.length > 210 ? p.slice(0, 207).replace(/\s\S*$/, "") + "…" : p; };
+  return `<aside class="assistant" aria-labelledby="assistant-titre">
+    <div class="assistant-tete"><span class="assistant-ico" aria-hidden="true">${IC.livreOuvert || ""}</span><div><h2 id="assistant-titre">Assistant bibliothécaire</h2><p>Dites-nous ce que vous cherchez : nous vous indiquons les ouvrages qui traitent réellement ce sujet.</p></div></div>
+    <div class="besoins" role="group" aria-label="Ce que vous cherchez">${BESOINS.filter(b => recommandations(b.id).length).map(b => `<button type="button" class="besoin" data-besoin="${b.id}" aria-pressed="${b.id === besoinChoisi}">${esc(b.nom)}</button>`).join("")}</div>
+    <div class="assistant-reponse" id="assistant-reponse" aria-live="polite">${reco.length ? `<p class="assistant-intro">${reco.length > 1 ? "Ouvrages conseillés" : "Ouvrage conseillé"} pour « ${esc(BESOINS.find(x => x.id === besoinChoisi).nom)} » :</p>
+      <ol class="reco-assistant">${reco.map((l, i) => `<li><a href="#livre-${l.slug}"><img src="${mini(l)}" alt="" width="420" height="595" loading="lazy"><span><small>${i ? "Également" : "Notre premier conseil"}</small><b>${esc(l.titre)}</b><em>${esc(pourquoi(l))}</em><span class="reco-prix num">${l.prix ? px(l.prix) : ""}</span></span></a></li>`).join("")}</ol>` : ""}</div>
+  </aside>`;
+}
 function pageCatalogue() {
   return `<section style="padding-top:clamp(28px,4vw,48px)"><div class="wrap">
     <div class="section-tete"><div>${enTete("La librairie", `Les ouvrages du <span class="b">Docteur B. Silas Gbavou</span>`, "Doctrine, prophétie, prière, Royaume et ministère : parcourez la librairie, puis touchez une couverture pour découvrir l'ouvrage.")}</div></div>
     </div></section>
   ${bandeVideos()}
   <section style="padding-top:clamp(20px,3vw,32px)"><div class="wrap">
+    ${blocAssistant()}
     <div class="outils">
-      <div class="recherche">${IC.loupe}<label class="sr" for="q">Rechercher un livre</label><input id="q" type="search" placeholder="Rechercher un titre, un thème…" value="${esc(recherche)}" autocomplete="off"></div>
+      <div class="recherche">${IC.loupe}<label class="sr" for="q">Rechercher un livre</label><input id="q" type="search" placeholder="Titre, sujet ou question : onction, anges, fin des temps…" value="${esc(recherche)}" autocomplete="off" enterkeyhint="search"></div>
       <div class="filtres" role="group" aria-label="Filtrer par thème">
         ${["Tous", ...THEMES].map(t => `<button class="filtre" type="button" data-filtre="${esc(t)}" aria-pressed="${t === filtre}">${esc(t)}</button>`).join("")}
       </div>
     </div>
+    <div class="sujets" role="group" aria-label="Sujets fréquents"><span class="sujets-titre">Sujets :</span>${sujetsUtiles().map(t => `<button type="button" class="sujet" data-sujet="${esc(t)}" aria-pressed="${normal(recherche.trim()) === normal(t)}">${esc(t)}</button>`).join("")}</div>
     <p class="resultat" id="resultat" aria-live="polite">${esc(texteResultat())}</p>
     <div class="grille" id="grille">${grilleCatalogue()}</div>
   </div></section>
@@ -535,6 +575,7 @@ function pageLivre(l) {
             ${infoDevise()}
             <button class="btn btn-principal btn-large btn-eclat" type="button" data-procurer="${l.id}">Se procurer ce livre</button>
             <button class="btn btn-capsule btn-large" type="button" data-ajouter="${l.id}">Ajouter à ma sélection</button>
+            <button class="btn btn-contour btn-large btn-apercu" type="button" data-apercu="${l.id}">${IC.livreOuvert || ""}Feuilleter l'aperçu</button>
             ${l.extrait ? `<a class="btn btn-contour btn-large" href="${esc(l.extrait)}" target="_blank" rel="noopener" data-sortie="extrait">Lire un extrait</a>` : ""}
             <ul class="garanties"><li>Paiement sécurisé : Mobile Money ou carte bancaire</li><li>PDF remis automatiquement après l'achat</li><li>Lecture sur téléphone, tablette ou ordinateur</li></ul>
             ${noteEditeur(true)}
@@ -867,6 +908,44 @@ function procurer(id) {
   if (ajouter(id)) location.hash = "commande";
 }
 
+/* ---------- Aperçu : couverture, page de titre, sommaire, extrait (contenus réels du livre) ---------- */
+let apercu = { l: null, i: 0, pages: [] };
+function pagesApercu(l) {
+  const P = [];
+  P.push(`<div class="ap-page ap-couv"><img src="${esc(l.couverture)}" alt="Couverture du livre ${esc(l.titre)}" width="800" height="1133"></div>`);
+  P.push(`<div class="ap-page ap-titre"><small>Providence Éditions Prestige</small><h3>${esc(l.titre)}</h3>${l.sous ? `<p class="ap-sous">${esc(l.sous)}</p>` : ""}<p class="ap-auteur">${esc(auteursTxt(l))}</p><dl>${[["Format", "Livre numérique PDF" + (l.format ? " · " + l.format : "")], ["Pages", l.pages || ""], ["Thème", l.theme], ["Édition", l.copyright ? "© " + l.copyright : ""]].filter(x => x[1]).map(([a, b]) => `<div><dt>${a}</dt><dd>${esc(String(b))}</dd></div>`).join("")}</dl></div>`);
+  if ((l.chapitres || []).length) P.push(`<div class="ap-page ap-sommaire"><small>${l.sommaireType === "parties" ? "Les grandes parties" : l.sommaireType === "chapitres" ? "Sommaire" : "Quelques chapitres"}</small><ol>${l.chapitres.map(c => `<li>${esc(c)}</li>`).join("")}</ol>${l.sommaireType === "extraits" ? `<p class="ap-note">Sélection de chapitres : le sommaire complet figure dans le PDF.</p>` : ""}</div>`);
+  if ((l.cles || []).length) P.push(`<div class="ap-page ap-cles"><small>Ce que vous allez découvrir</small><ul>${l.cles.slice(0, 5).map(c => `<li>${esc(c)}</li>`).join("")}</ul></div>`);
+  if (l.citation) P.push(`<div class="ap-page ap-extrait"><small>Extrait</small><blockquote>« ${esc(l.citation)} »</blockquote><p class="ap-ref">${esc(l.titre)}${l.citation_page ? ", page " + l.citation_page + " du PDF" : ""}</p></div>`);
+  return P;
+}
+function ouvrirApercu(id) {
+  const l = LIVRES.find(x => x.id === id); if (!l) return;
+  apercu = { l, i: 0, pages: pagesApercu(l) };
+  const d = $("#apercu"); $(".ap-livre", d).textContent = l.titre;
+  $(".ap-acheter", d).dataset.procurer = l.id;
+  rendreApercu(0);
+  try { d.showModal(); } catch (err) { d.setAttribute("open", ""); }
+  mesure("apercu", { livre: id });
+}
+function rendreApercu(sens) {
+  const d = $("#apercu"), n = apercu.pages.length;
+  const sc = $(".ap-scene", d); sc.innerHTML = apercu.pages[apercu.i];
+  const pg = $(".ap-page", sc); if (pg && sens && !reduit.matches) pg.classList.add(sens > 0 ? "ap-entre-d" : "ap-entre-g");
+  $(".ap-pos", d).textContent = `${apercu.i + 1} / ${n}`;
+  $(".ap-prec", d).disabled = apercu.i === 0; $(".ap-suiv", d).disabled = apercu.i === n - 1;
+  $(".ap-points", d).innerHTML = apercu.pages.map((_, k) => `<span class="${k === apercu.i ? "on" : ""}"></span>`).join("");
+}
+function tournerApercu(sens) { const k = apercu.i + sens; if (k < 0 || k >= apercu.pages.length) return; apercu.i = k; rendreApercu(sens); }
+function fermerApercu() { const d = $("#apercu"); try { d.close(); } catch (err) { d.removeAttribute("open"); } }
+(() => {
+  const d = document.getElementById("apercu"); if (!d) return;
+  let x0 = null;
+  d.addEventListener("pointerdown", e => { if (e.target.closest(".ap-scene")) x0 = e.clientX; });
+  d.addEventListener("pointerup", e => { if (x0 === null) return; const dx = e.clientX - x0; x0 = null; if (Math.abs(dx) > 40) tournerApercu(dx < 0 ? 1 : -1); });
+  d.addEventListener("keydown", e => { if (e.key === "ArrowRight") tournerApercu(1); if (e.key === "ArrowLeft") tournerApercu(-1); });
+})();
+
 /* ---------- Actions ---------- */
 document.addEventListener("click", e => {
   const s = e.target.closest("[data-sortie]");
@@ -876,6 +955,16 @@ document.addEventListener("click", e => {
   const df = e.target.closest("[data-defile]");
   if (df) { e.preventDefault(); const c = document.getElementById(df.dataset.defile); if (c) { c.scrollIntoView({ behavior: reduit.matches ? "auto" : "smooth" }); const h = $("h2", c); if (h) { h.setAttribute("tabindex", "-1"); h.focus({ preventScroll: true }); } } return; }
   if (e.target.closest("[data-haut]")) { window.scrollTo({ top: 0, behavior: reduit.matches ? "auto" : "smooth" }); return; }
+  const ap = e.target.closest("[data-apercu]");
+  if (ap) { ouvrirApercu(ap.dataset.apercu); return; }
+  if (e.target.closest(".ap-prec")) { tournerApercu(-1); return; }
+  if (e.target.closest(".ap-suiv")) { tournerApercu(1); return; }
+  if (e.target.closest("[data-fermer-apercu]") || e.target.id === "apercu") { fermerApercu(); return; }
+  if (e.target.closest(".ap-acheter")) fermerApercu();
+  const sj = e.target.closest("[data-sujet]");
+  if (sj) { const v = normal(recherche.trim()) === normal(sj.dataset.sujet) ? "" : sj.dataset.sujet; recherche = v; const q = $("#q"); if (q) q.value = v; $$(".sujet").forEach(b => b.setAttribute("aria-pressed", normal(b.dataset.sujet) === normal(v) && !!v)); $("#grille").innerHTML = grilleCatalogue(); $("#resultat").textContent = texteResultat(); return; }
+  const bs = e.target.closest("[data-besoin]");
+  if (bs) { besoinChoisi = besoinChoisi === bs.dataset.besoin ? "" : bs.dataset.besoin; const a = $(".assistant"); if (a) { a.outerHTML = blocAssistant(); const r = $("#assistant-reponse"); if (r && besoinChoisi && r.firstElementChild) r.scrollIntoView({ block: "nearest", behavior: reduit.matches ? "auto" : "smooth" }); } return; }
   const pr = e.target.closest("[data-procurer]");
   if (pr) { procurer(pr.dataset.procurer); return; }
   const dv = e.target.closest("button[data-devise]");
@@ -939,7 +1028,7 @@ document.addEventListener("click", e => {
   }
 });
 document.addEventListener("input", e => {
-  if (e.target.id === "q") { recherche = e.target.value; $("#grille").innerHTML = grilleCatalogue(); $("#resultat").textContent = texteResultat(); }
+  if (e.target.id === "q") { recherche = e.target.value; $("#grille").innerHTML = grilleCatalogue(); $("#resultat").textContent = texteResultat(); $$(".sujet").forEach(b => b.setAttribute("aria-pressed", !!recherche.trim() && normal(b.dataset.sujet) === normal(recherche.trim()))); }
 });
 /* Le dock se retire pendant la saisie (clavier ouvert) pour ne pas masquer les champs */
 document.addEventListener("focusin", e => { if (e.target.matches("input,select,textarea")) $(".barre-mobile").classList.add("masque"); });
@@ -953,7 +1042,7 @@ window.addEventListener("scroll", surDefilement, { passive: true }); surDefileme
 
 /* ---------- Chargement ---------- */
 vue.innerHTML = `<p class="chargement">Chargement de la bibliothèque…</p>`;
-Promise.all([fetch("data/livres.json?v=20261121d", { cache: "no-cache" }).then(r => r.json()), fetch("data/config.json?v=20261121d", { cache: "no-cache" }).then(r => r.json())])
+Promise.all([fetch("data/livres.json?v=20261121e", { cache: "no-cache" }).then(r => r.json()), fetch("data/config.json?v=20261121e", { cache: "no-cache" }).then(r => r.json())])
   .then(([l, c]) => {
     /* Tolérance aux fiches saisies depuis la plateforme de gestion */
     const sl = t => String(t || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
