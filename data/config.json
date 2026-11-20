@@ -1,0 +1,265 @@
+{
+ "boutique": "Providence Éditions Prestige",
+ "structure": "JSE La Providence",
+ "auteur": {
+  "nom": "Docteur B. Silas Gbavou",
+  "nomComplet": "Bienvenue Silas Gbavou",
+  "fonctions": [
+   "Enseignant de la Parole de Dieu",
+   "Auteur chrétien et écrivain",
+   "Scribe prophétique",
+   "Éditeur"
+  ],
+  "bio": [
+   "Le Docteur B. Silas Gbavou, de son nom civil Bienvenue Silas Gbavou, est un enseignant de la Parole de Dieu, écrivain chrétien, scribe prophétique et éditeur béninois.",
+   "Porteur d'un ministère à la fois doctoral et prophétique, il consacre son œuvre à l'enseignement des Saintes Écritures, à l'exploration des mystères bibliques et à la transmission des connaissances spirituelles destinées à l'édification du Corps de Christ. Son approche se fonde sur l'étude des Écritures, l'exégèse biblique, les langues hébraïque et grecque, la typologie et l'interprétation des symboles bibliques.",
+   "Il accorde une importance particulière à la restauration de la saine doctrine, à la maturité spirituelle des croyants et à la compréhension des différentes dimensions du ministère de la Parole. À travers ses enseignements, il distingue notamment les langages de la connaissance, de la révélation et de la prophétie.",
+   "Ses travaux abordent les mystères bibliques, le mouvement prophétique, les dons spirituels, le ministère de la Parole, les réalités de la rédemption, la prière, le Royaume de Dieu, l'héritage des saints et les juridictions spirituelles. Son objectif est de contribuer à l'affranchissement spirituel des croyants par la connaissance de la vérité et de participer à l'édification de l'Église glorieuse."
+  ],
+  "bio_source": "4e de couverture du Mystère du Vase d'Or (p. 434)",
+  "photo": "images/auteur-officiel.jpg",
+  "whatsapp": "+229 01 67 96 00 94",
+  "email": "silasgbavou@gmail.com",
+  "facebook": "https://www.facebook.com/share/1F3i5yJZFy/",
+  "nationalite": "Béninoise",
+  "photoBuste": "images/auteur-officiel-buste.jpg",
+  "galerie": [
+   "images/auteur-enseignement.jpg",
+   "images/auteur-ecriture.jpg",
+   "images/auteur-portrait.jpg"
+  ],
+  "noteTitre": "Le titre de Docteur désigne son ministère doctoral dans l'enseignement de la Parole de Dieu et ne constitue pas une référence à un doctorat universitaire.",
+  "bioCourte": "Enseignant de la Parole de Dieu, écrivain chrétien, scribe prophétique et éditeur béninois, il consacre son œuvre à l'enseignement des Écritures, à l'exploration des mystères bibliques et à la transmission de la saine doctrine.",
+  "vision": "Sa vision repose sur la transmission fidèle des enseignements bibliques et la formation de croyants capables de comprendre les réalités spirituelles à la lumière des Écritures, avec une attention particulière à la précision doctrinale, spirituelle et prophétique, à la cohérence des interprétations et à la maturité spirituelle.",
+  "ecriture": [
+   "La rédaction d'enseignements bibliques approfondis",
+   "L'organisation méthodique des contenus doctrinaux",
+   "L'analyse et l'explication des passages scripturaires",
+   "L'étude des réalités prophétiques et spirituelles",
+   "La transmission pédagogique des connaissances",
+   "La préparation et la publication d'ouvrages destinés à l'édification chrétienne"
+  ],
+  "citation": "Les esprits qui ont de grands destins ont de grands défis, aussi de grands combats et rencontrent de grandes épreuves, mais le dessein de Dieu se réalise certainement dans leur vie. Je suis un conquérant de Jésus-Christ sur terre pour impacter ma génération."
+ },
+ "editeur": {
+  "email": "providenceeditionsprestige@gmail.com",
+  "whatsapp": "+229 01 49 30 18 86",
+  "logo": "images/logo-providence.png",
+  "adresse": "Godomey Fignonhou, Abomey-Calavi, Bénin",
+  "slogan": null,
+  "marque": "images/logo-p.png",
+  "fonction": "Promoteur et Directeur général : Docteur B. Silas Gbavou",
+  "vocation": "Accompagner la transformation des manuscrits et des enseignements en ouvrages professionnels, destinés à la lecture numérique et à l'impression, en associant qualité rédactionnelle, rigueur typographique, identité graphique et exigences techniques de publication.",
+  "devise": "Édition • Qualité • Excellence",
+  "competences": [
+   "Préparation et structuration des manuscrits",
+   "Correction orthographique, grammaticale et syntaxique",
+   "Révision linguistique et éditoriale",
+   "Composition et mise en page professionnelles",
+   "Conception des couvertures et des quatrièmes de couverture",
+   "Schémas, tableaux et diagrammes",
+   "Sommaires interactifs et signets hiérarchiques",
+   "Livres PDF et fichiers prêts pour l'impression",
+   "Contrôle qualité et bons à tirer"
+  ],
+  "philosophie": "Fidélité aux manuscrits, lisibilité, harmonie des compositions et qualité de présentation des ouvrages.",
+  "facebook": "Providence Éditions Prestige",
+  "annonce": {
+   "titre": "Du manuscrit au livre professionnel",
+   "accroche": "Votre manuscrit mérite le meilleur",
+   "services": [
+    "Traitement et correction éditoriale",
+    "Mise en pages et maquette",
+    "Conception de couverture",
+    "ISBN, PDF et contrôle prépresse"
+   ],
+   "promesse": "Édition soignée",
+   "promesseTexte": "Transformation de vos manuscrits en livres professionnels (PDF prêt à l'impression).",
+   "appel": "Confiez-nous votre manuscrit",
+   "visuels": [
+    "images/annonce-manuscrit.jpg",
+    "images/annonce-edition.jpg"
+   ]
+  }
+ },
+ "vente": {
+  "whatsappCommandes": "2290149301886",
+  "mobileMoney": {
+   "actif": false,
+   "instructions": ""
+  },
+  "lienCollection": "",
+  "prixCollection": 55000,
+  "devise": "XOF",
+  "urlSite": "https://silasgbavou.github.io/librairie/",
+  "videos": [
+   {
+    "livre": "vase-d-or",
+    "fichier": "videos/vase-d-or-presentation.mp4",
+    "affiche": "videos/vase-d-or-presentation.jpg",
+    "type": "Présentation",
+    "titre": "Présentation officielle de l'ouvrage",
+    "format": "horizontal"
+   },
+   {
+    "livre": "heritage-des-saints",
+    "fichier": "videos/heritage-des-saints-presentation.mp4",
+    "affiche": "videos/heritage-des-saints-presentation.jpg",
+    "type": "Présentation",
+    "titre": "Présentation officielle de l'ouvrage",
+    "format": "horizontal"
+   },
+   {
+    "livre": "mouvement-prophetique",
+    "fichier": "videos/mouvement-prophetique-presentation.mp4",
+    "affiche": "videos/mouvement-prophetique-presentation.jpg",
+    "type": "Présentation",
+    "titre": "Présentation officielle de l'ouvrage",
+    "format": "horizontal"
+   },
+   {
+    "livre": "porteurs-mobiles",
+    "fichier": "videos/porteurs-mobiles-presentation.mp4",
+    "affiche": "videos/porteurs-mobiles-presentation.jpg",
+    "type": "Présentation",
+    "titre": "Présentation officielle de l'ouvrage",
+    "format": "vertical"
+   },
+   {
+    "livre": "oint-ministere-parole",
+    "fichier": "videos/oint-ministere-parole-presentation.mp4",
+    "affiche": "videos/oint-ministere-parole-presentation.jpg",
+    "type": "Présentation",
+    "titre": "Présentation officielle de l'ouvrage",
+    "format": "vertical"
+   },
+   {
+    "livre": "collection",
+    "fichier": "videos/collection-presentation.mp4",
+    "affiche": "videos/collection-presentation.jpg",
+    "type": "Collection",
+    "titre": "Un seul auteur, une collection complète",
+    "format": "horizontal"
+   },
+   {
+    "livre": "vase-d-or",
+    "fichier": "videos/vase-d-or-enseignement.mp4",
+    "affiche": "videos/vase-d-or-enseignement.jpg",
+    "type": "Extrait d'enseignement",
+    "titre": "Le combat contre le prophétique",
+    "format": "vertical"
+   },
+   {
+    "livre": "heritage-des-saints",
+    "fichier": "videos/heritage-des-saints-enseignement.mp4",
+    "affiche": "videos/heritage-des-saints-enseignement.jpg",
+    "type": "Extrait d'enseignement",
+    "titre": "La nuée des témoins",
+    "format": "vertical"
+   },
+   {
+    "livre": "mouvement-prophetique",
+    "fichier": "videos/mouvement-prophetique-enseignement.mp4",
+    "affiche": "videos/mouvement-prophetique-enseignement.jpg",
+    "type": "Extrait d'enseignement",
+    "titre": "Les consultations prophétiques",
+    "format": "vertical"
+   },
+   {
+    "livre": "porteurs-mobiles",
+    "fichier": "videos/porteurs-mobiles-enseignement.mp4",
+    "affiche": "videos/porteurs-mobiles-enseignement.jpg",
+    "type": "Extrait d'enseignement",
+    "titre": "Dieu est mobile",
+    "format": "vertical"
+   },
+   {
+    "livre": "oint-ministere-parole",
+    "fichier": "videos/oint-ministere-parole-enseignement.mp4",
+    "affiche": "videos/oint-ministere-parole-enseignement.jpg",
+    "type": "Extrait d'enseignement",
+    "titre": "Le ministère de la Parole et ses langages",
+    "format": "vertical"
+   },
+   {
+    "livre": "oint-ministere-parole",
+    "fichier": "videos/oint-ministere-parole-enseignement-2.mp4",
+    "affiche": "videos/oint-ministere-parole-enseignement-2.jpg",
+    "type": "Extrait d'enseignement",
+    "titre": "Révélation, prophétie et enseignement",
+    "format": "vertical"
+   }
+  ],
+  "deviseAffichee": "FCFA",
+  "urlCanonique": "https://silasgbavou.github.io/librairie/",
+  "paiementEnLigne": {
+   "actif": true,
+   "prestataire": "Maketou",
+   "verifie": true,
+   "note": "Liens Maketou vérifiés le 20/11/2026 (pages produit publiées). Achat test recommandé."
+  },
+  "boutiqueMaketou": "https://providence-editions-prestige-9.mymaketou.shop/fr",
+  "lienCollectionAVenir": "https://providence-editions-prestige-9.mymaketou.shop/fr/products/collection-complete-les-14-livres-du-docteur-b-silas-gbavou",
+  "whatsappAssistance": "2290167960094",
+  "change": {
+   "parite": {
+    "EUR": 655.957
+   },
+   "usdReference": {
+    "eurUsd": 1.0989,
+    "date": "2026-11-17",
+    "source": "BCE"
+   },
+   "sources": [
+    "https://api.frankfurter.dev/v1/latest?base=EUR&symbols=USD",
+    "https://open.er-api.com/v6/latest/EUR"
+   ],
+   "cacheHeures": 12
+  }
+ },
+ "contacts": [
+  {
+   "type": "facebook",
+   "label": "Facebook",
+   "valeur": "Docteur B. Silas Gbavou",
+   "lien": "https://www.facebook.com/share/1F3i5yJZFy/"
+  },
+  {
+   "type": "whatsapp",
+   "label": "WhatsApp · Providence Éditions Prestige",
+   "valeur": "+229 01 49 30 18 86",
+   "lien": "https://wa.me/2290149301886"
+  },
+  {
+   "type": "whatsapp",
+   "label": "WhatsApp · Docteur B. Silas Gbavou",
+   "valeur": "+229 01 67 96 00 94",
+   "lien": "https://wa.me/2290167960094"
+  },
+  {
+   "type": "email",
+   "label": "E-mail · Docteur B. Silas Gbavou",
+   "valeur": "silasgbavou@gmail.com",
+   "lien": "mailto:silasgbavou@gmail.com"
+  },
+  {
+   "type": "email",
+   "label": "E-mail · Providence Éditions Prestige",
+   "valeur": "providenceeditionsprestige@gmail.com",
+   "lien": "mailto:providenceeditionsprestige@gmail.com"
+  }
+ ],
+ "pays": "Bénin",
+ "mesure": {
+  "actif": true,
+  "note": "Les événements sont poussés dans window.dataLayer, sans aucune donnée personnelle. Brancher un outil d'analyse plus tard si besoin."
+ },
+ "infosLegales": {
+  "adresseProfessionnelle": "Godomey Fignonhou, Abomey-Calavi, Bénin",
+  "rccm": null,
+  "ifu": null,
+  "delaiTraitement": null,
+  "remboursement": null,
+  "usageCollectif": null
+ }
+}

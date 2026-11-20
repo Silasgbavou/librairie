@@ -1,0 +1,836 @@
+/* Boutique Providence Éditions Prestige — refonte bleu et blanc
+   Données : data/livres.json (fiches) et data/config.json (réglages, contacts, paiement).
+   Aucun secret ni lien de téléchargement de PDF dans ce fichier. */
+(() => {
+"use strict";
+let TOUS = [], LIVRES = [], CFG = {}, THEMES = [];
+const vue = document.getElementById("vue");
+const $ = (s, r = document) => r.querySelector(s);
+const $$ = (s, r = document) => [...r.querySelectorAll(s)];
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const fcfa = n => Number(n).toLocaleString("fr-FR").replace(/ | /g, " ") + " FCFA";
+const wa = (num, txt) => "https://wa.me/" + num + "?text=" + encodeURIComponent(txt);
+const mini = l => "couvertures/mini/" + l.couverture.split("/").pop();
+const auteursTxt = l => l.auteurs.join(" et ");
+const deux = n => String(n).padStart(2, "0");
+const reduit = matchMedia("(prefers-reduced-motion: reduce)");
+
+/* Stockage sûr : jamais bloquant si le navigateur refuse */
+const stock = {
+  lire(type, cle) { try { return JSON.parse(window[type].getItem(cle) || "null"); } catch (e) { return null; } },
+  ecrire(type, cle, v) { try { v == null ? window[type].removeItem(cle) : window[type].setItem(cle, JSON.stringify(v)); } catch (e) {} }
+};
+
+/* Mesure d'audience sans donnée personnelle : seulement le nom de l'événement et l'identifiant du livre */
+function mesure(evenement, details) {
+  if (CFG.mesure && CFG.mesure.actif === false) return;
+  const d = { event: evenement };
+  if (details && details.livre) d.livre = details.livre;
+  if (details && details.nb != null) d.nb = details.nb;
+  if (details && details.canal) d.canal = details.canal;
+  (window.dataLayer = window.dataLayer || []).push(d);
+}
+
+/* Icônes */
+const IC = {
+  wa: `<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2Zm5.3 14.1c-.2.6-1.3 1.2-1.8 1.2-.5.1-1 .2-3.3-.7-2.8-1.1-4.6-4-4.7-4.2-.1-.2-1.1-1.5-1.1-2.9s.7-2 1-2.3c.2-.3.5-.3.7-.3h.5c.2 0 .4 0 .6.5l.8 2c.1.2.1.4 0 .5l-.3.5-.4.4c-.1.1-.3.3-.1.6.1.3.6 1 1.4 1.7 1 .9 1.8 1.1 2 1.3.3.1.4.1.6-.1l.8-1c.2-.2.4-.2.6-.1l1.9.9c.3.1.4.2.5.3.1.2.1.7-.2 1.4Z"/></svg>`,
+  facebook: `<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="#fff" d="M15.1 8.3h-1.9c-.5 0-.9.4-.9.9v2h2.8l-.4 2.9h-2.4V21H9.4v-6.9H7.1v-2.9h2.3V9c0-2.2 1.3-3.5 3.4-3.5.9 0 1.9.1 2.3.2z"/></svg>`,
+  whatsapp: `<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="#fff" d="M12 3.2a8.8 8.8 0 0 0-7.6 13.3L3.3 20.8l4.4-1.1A8.8 8.8 0 1 0 12 3.2Zm0 16a7.2 7.2 0 0 1-3.7-1l-.3-.2-2.6.7.7-2.5-.2-.3A7.2 7.2 0 1 1 12 19.2Zm4-5.4c-.2-.1-1.3-.6-1.5-.7-.2-.1-.4-.1-.5.1l-.7.9c-.1.2-.3.2-.5.1a5.9 5.9 0 0 1-2.9-2.5c-.2-.4.2-.4.6-1.2.1-.1 0-.3 0-.4l-.7-1.6c-.2-.4-.4-.4-.5-.4h-.4a.8.8 0 0 0-.6.3 2.5 2.5 0 0 0-.8 1.9 4.4 4.4 0 0 0 .9 2.3 10 10 0 0 0 3.8 3.4c1.4.6 2 .7 2.7.6.4-.1 1.3-.5 1.5-1s.2-1 .1-1-.2-.2-.5-.3Z"/></svg>`,
+  email: `<svg viewBox="0 0 48 48" aria-hidden="true"><path fill="#4285F4" d="M6 38h7V22L4 15v20a3 3 0 0 0 2 3Z"/><path fill="#34A853" d="M35 38h7a3 3 0 0 0 2-3V15l-9 7Z"/><path fill="#FBBC04" d="M35 12v10l9-7v-3c0-3.7-4.2-5.8-7.2-3.6Z"/><path fill="#EA4335" d="M13 22V12l11 8.3L35 12v10l-11 8.3Z"/><path fill="#C5221F" d="M4 12v3l9 7V12l-1.8-1.6C8.2 8.2 4 10.3 4 12Z"/></svg>`,
+  fleche: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>`,
+  croix: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg>`,
+  info: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 11v6M12 7.5h.01"/></svg>`,
+  alerte: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M12 3 2 20h20z"/><path d="M12 10v4M12 17h.01"/></svg>`,
+  loupe: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>`,
+  sablier: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 3h12M6 21h12M7 3c0 5 10 5 10 9s-10 4-10 9M17 3c0 5-10 5-10 9"/></svg>`,
+  sac: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 7h12l-1 13H7z"/><path d="M9 7a3 3 0 0 1 6 0"/></svg>`,
+  lieu: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21s-7-6.1-7-11.5a7 7 0 0 1 14 0C19 14.9 12 21 12 21Z"/><circle cx="12" cy="9.5" r="2.5"/></svg>`,
+  plume: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20h4L19.2 8.8a2.8 2.8 0 0 0-4-4L4 16z"/><path d="m13.5 6.5 4 4"/></svg>`,
+  livreOuvert: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 5.5C5.5 4 8.5 4 12 6c3.5-2 6.5-2 9-.5V19c-2.5-1.5-5.5-1.5-9 .5-3.5-2-6.5-2-9-.5z"/><path d="M12 6v13.5"/></svg>`,
+  image: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="3" width="16" height="18" rx="2.5"/><circle cx="9.5" cy="9" r="1.8"/><path d="m4.5 17 4.5-4.5 4 4 2.5-2.5 4 4"/></svg>`,
+  isbn: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2.5"/><path d="M7 8v8M10 8v8M13 8v8M15.5 8v8M17.5 8v8"/></svg>`,
+  piece: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v16M7 20h10M5 7h14"/><path d="m5 7-3 6a3 3 0 0 0 6 0zM19 7l-3 6a3 3 0 0 0 6 0z"/></svg>`,
+  bouclier: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3 4.5 6v5.5c0 4.6 3.2 8.4 7.5 9.5 4.3-1.1 7.5-4.9 7.5-9.5V6z"/><path d="m8.8 12 2.2 2.2 4.3-4.4"/></svg>`
+};
+
+/* ---------- Panier ---------- */
+let panier = { ids: [], collection: false };
+const sP = stock.lire("localStorage", "pep-panier");
+if (sP && Array.isArray(sP.ids)) panier = { ids: sP.ids.filter(x => typeof x === "string").slice(0, 30), collection: !!sP.collection };
+let retires = []; // titres retirés automatiquement car indisponibles
+
+function nettoyer() {
+  const dispo = new Set(LIVRES.map(l => l.id));
+  const avant = panier.ids.slice();
+  panier.ids = [...new Set(panier.ids)].filter(id => dispo.has(id));
+  retires = avant.filter(id => !dispo.has(id)).map(id => (TOUS.find(l => l.id === id) || {}).titre || "Un livre");
+  if (retires.length) sauver();
+}
+function sauver() { stock.ecrire("localStorage", "pep-panier", panier); majCompteur(); }
+const nbArticles = () => panier.collection ? LIVRES.length : panier.ids.length;
+function majCompteur(bump) {
+  const n = nbArticles();
+  ["nb-haut", "nb-bas"].forEach(id => {
+    const p = document.getElementById(id); if (!p) return;
+    p.textContent = n; p.hidden = n === 0;
+    if (bump && !reduit.matches) { p.classList.remove("bump"); void p.offsetWidth; p.classList.add("bump"); }
+  });
+  const centre = $(".barre-mobile .centre");
+  if (centre) centre.setAttribute("aria-label", n ? `Commande, ${n} ${n > 1 ? "livres" : "livre"}` : "Commande");
+}
+function avis(texte, annuler) { stock.ecrire("sessionStorage", "pep-avis", { texte, annuler: annuler || null }); }
+function ajouter(id) {
+  const l = LIVRES.find(x => x.id === id); if (!l) return false;
+  if (panier.collection) {
+    avis(`La collection complète a été remplacée par « ${l.titre} ».`, { collection: true, ids: [] });
+    panier = { ids: [id], collection: false };
+  } else if (!panier.ids.includes(id)) panier.ids.push(id);
+  else { sauver(); toast("Ce livre est déjà dans votre commande"); return true; }
+  sauver(); majCompteur(true); mesure("ajout_commande", { livre: id });
+  toast("Ajouté à votre sélection");
+  return true;
+}
+function choisirCollection() {
+  if (!panier.collection && panier.ids.length) {
+    avis(`Vos ${panier.ids.length} ${panier.ids.length > 1 ? "livres sélectionnés ont été remplacés" : "livre sélectionné a été remplacé"} par la collection complète, qui ${panier.ids.length > 1 ? "les contient" : "le contient"}.`, { collection: false, ids: panier.ids.slice() });
+  }
+  panier = { ids: [], collection: true };
+  sauver(); majCompteur(true); mesure("ajout_commande", { livre: "collection" });
+}
+function toast(t) { const el = $("#toast"); el.textContent = t; el.classList.add("on"); clearTimeout(toast.t); toast.t = setTimeout(() => el.classList.remove("on"), 2000); }
+
+/* ---------- Devises : équivalences indicatives, le règlement reste en FCFA ----------
+   EUR : parité fixe 1 € = 655,957 FCFA. USD : taux EUR/USD de la BCE (service public),
+   gardé 12 h sur l'appareil ; sans réseau, le dernier taux connu ou le taux de référence. */
+const DEVISES = [["XOF", "FCFA", "Francs CFA"], ["EUR", "€", "Euros"], ["USD", "$", "Dollars américains"]];
+const CODES = DEVISES.map(d => d[0]);
+let devise = (() => { const d = stock.lire("localStorage", "pep-devise"); return CODES.includes(d) ? d : "XOF"; })();
+let taux = null, tauxEnCours = null;
+const change = () => (CFG.vente && CFG.vente.change) || {};
+const parite = () => (change().parite || {}).EUR || 655.957;
+function tauxReference() { const r = change().usdReference || {}; return { eurUsd: r.eurUsd || 1.1, date: r.date || "", source: r.source || "BCE" }; }
+const dateFr = d => d ? String(d).split("-").reverse().join("/") : "";
+const deci = n => n.toLocaleString("fr-FR", { minimumFractionDigits: 2, maximumFractionDigits: 2 }).replace(/[\u202f\u00a0]/g, " ");
+function convertir(xof) {
+  if (devise === "EUR") return deci(xof / parite()) + " €";
+  if (devise === "USD") return deci(xof / parite() * (taux || tauxReference()).eurUsd) + " $";
+  return fcfa(xof);
+}
+function contenuPx(xof, mode) {
+  if (devise === "XOF") return esc(fcfa(xof));
+  if (mode === "texte") return `${esc(fcfa(xof))} <span class="px-eq">(≈ ${esc(convertir(xof))})</span>`;
+  return `<span class="px-val">≈ ${esc(convertir(xof))}</span><span class="px-ref">${esc(fcfa(xof))}</span>`;
+}
+const px = (xof, mode) => `<span class="px${mode ? " px-" + mode : ""}" data-xof="${Number(xof)}">${contenuPx(xof, mode)}</span>`;
+function texteDevise() {
+  if (devise === "EUR") return `Équivalence indicative à la parité fixe 1 € = ${String(parite()).replace(".", ",")} FCFA. Le règlement s'effectue en FCFA.`;
+  if (devise === "USD") { const t = taux || tauxReference(); return `Équivalence indicative : 1 € = ${String(t.eurUsd).replace(".", ",")} $ (taux ${t.source}${t.date ? " du " + dateFr(t.date) : ""}). Le règlement s'effectue en FCFA.`; }
+  return "";
+}
+const infoDevise = () => `<p class="devise-info" data-devise-info ${devise === "XOF" ? "hidden" : ""}>${esc(texteDevise())}</p>`;
+const selecteurDevise = cls => `<div class="devises${cls ? " " + cls : ""}" role="group" aria-label="Devise d'affichage des prix" style="--i:${CODES.indexOf(devise)}"><span class="curseur" aria-hidden="true"></span>${DEVISES.map(d => `<button type="button" data-devise="${d[0]}" aria-pressed="${d[0] === devise}" aria-label="${d[2]}">${d[1]}</button>`).join("")}</div>`;
+function majDevise(anime) {
+  document.documentElement.dataset.deviseActive = devise;
+  $$(".devises").forEach(g => { g.style.setProperty("--i", CODES.indexOf(devise)); $$("[data-devise]", g).forEach(b => b.setAttribute("aria-pressed", String(b.dataset.devise === devise))); });
+  $$(".px").forEach(el => {
+    el.innerHTML = contenuPx(+el.dataset.xof, el.classList.contains("px-texte") ? "texte" : "");
+    if (anime && !reduit.matches) { el.classList.remove("chg"); void el.offsetWidth; el.classList.add("chg"); }
+  });
+  $$("[data-devise-info]").forEach(el => { el.hidden = devise === "XOF"; el.textContent = texteDevise(); });
+}
+function choisirDevise(d) {
+  if (!CODES.includes(d) || d === devise) return;
+  devise = d; stock.ecrire("localStorage", "pep-devise", d);
+  majDevise(true);
+  if (d === "USD") actualiserTaux();
+  mesure("devise", { canal: d });
+}
+function actualiserTaux() {
+  if (tauxEnCours) return tauxEnCours;
+  const C = change(), duree = (C.cacheHeures || 12) * 36e5, cache = stock.lire("localStorage", "pep-taux");
+  if (cache && cache.eurUsd > 0) { taux = cache; if (devise === "USD") majDevise(false); if (Date.now() - (cache.recu || 0) < duree) return Promise.resolve(); }
+  const essai = (url, lire) => {
+    if (!url || !window.fetch) return Promise.reject(new Error("indisponible"));
+    const ac = window.AbortController ? new AbortController() : null, minuterie = setTimeout(() => ac && ac.abort(), 6000);
+    return fetch(url, { signal: ac ? ac.signal : undefined, cache: "no-store" })
+      .then(r => { if (!r.ok) throw new Error(String(r.status)); return r.json(); }).then(lire).finally(() => clearTimeout(minuterie));
+  };
+  const [s1, s2] = C.sources || [];
+  tauxEnCours = essai(s1, j => ({ eurUsd: +j.rates.USD, date: j.date, source: "BCE" }))
+    .catch(() => essai(s2, j => ({ eurUsd: +j.rates.USD, date: new Date(j.time_last_update_unix * 1000).toISOString().slice(0, 10), source: "ExchangeRate-API" })))
+    .then(t => { if (!(t.eurUsd > 0.5 && t.eurUsd < 3)) throw new Error("taux"); t.recu = Date.now(); taux = t; stock.ecrire("localStorage", "pep-taux", t); })
+    .catch(() => { if (!taux) taux = tauxReference(); })
+    .finally(() => { tauxEnCours = null; if (devise === "USD") majDevise(false); });
+  return tauxEnCours;
+}
+
+/* ---------- Assistance : contact direct de l'auteur sur WhatsApp ---------- */
+const numAssistance = () => CFG.vente.whatsappAssistance || CFG.vente.whatsappCommandes;
+const lienAssistance = sujet => wa(numAssistance(), "Bonjour Docteur B. Silas Gbavou, " + (sujet || "j'ai une question concernant mon paiement."));
+const assistance = sujet => `<p class="assistance"><span class="pico whatsapp">${IC.whatsapp}</span><span>Une question sur votre paiement ou votre livre ? <a href="${esc(lienAssistance(sujet))}" target="_blank" rel="noopener" data-sortie="assistance">Écrivez directement à l'auteur sur WhatsApp</a>.</span></p>`;
+
+function articles() { return panier.collection ? LIVRES : panier.ids.map(id => LIVRES.find(l => l.id === id)).filter(Boolean); }
+function totalConnu() {
+  if (panier.collection) return CFG.vente.prixCollection || null;
+  const a = articles(); if (!a.length || a.some(l => !l.prix)) return null;
+  return a.reduce((s, l) => s + l.prix, 0);
+}
+/* Le paiement en ligne n'est proposé que s'il est activé, vérifié, et que chaque article a son lien */
+function liensPaiement() {
+  const p = CFG.vente.paiementEnLigne || {};
+  if (!p.actif || !p.verifie) return null;
+  if (panier.collection) return CFG.vente.lienCollection ? [{ id: "collection", titre: "Collection complète", lien: CFG.vente.lienCollection, prix: CFG.vente.prixCollection }] : null;
+  const a = articles();
+  if (!a.length || a.some(l => !/^https:\/\//.test(l.lienPaiement || ""))) return null;
+  return a.map(l => ({ id: l.id, titre: l.titre, lien: l.lienPaiement, prix: l.prix }));
+}
+const prixLigne = l => l.prix ? `<span class="etat-prix num">${px(l.prix)}</span>` : `<span class="etat-prix inconnu">Prix sur demande</span>`;
+
+/* ---------- Composants ---------- */
+const livre3d = (l, grand) => `<div class="livre3d"><div class="vol"><div class="dos"></div><div class="pages"></div><div class="face"><img src="${grand ? l.couverture : mini(l)}" alt="Couverture du livre ${esc(l.titre)}" width="${grand ? 800 : 420}" height="${grand ? 1133 : 595}" ${grand ? "" : 'loading="lazy"'}></div></div></div>`;
+function carte(l, titreNiveau) {
+  const h = titreNiveau || "h3";
+  return `<article class="carte">
+    <a class="couv" href="#livre-${l.slug}" tabindex="-1" aria-hidden="true"><img src="${mini(l)}" alt="" loading="lazy" width="420" height="595"></a>
+    <span class="theme">${esc(l.theme)}</span>
+    <${h}><a href="#livre-${l.slug}">${esc(l.titre)}</a></${h}>
+    <span class="auteurs">${esc(auteursTxt(l))}</span>
+    ${prixLigne(l)}
+    <div class="boutons">
+      <a class="btn btn-capsule btn-petit" href="#livre-${l.slug}">Découvrir<span class="sr"> ${esc(l.titre)}</span></a>
+      <button class="btn btn-principal btn-petit" type="button" data-procurer="${l.id}">Se procurer<span class="sr"> (acheter ${esc(l.titre)})</span></button>
+    </div>
+  </article>`;
+}
+function groupesContacts() {
+  const E = CFG.editeur || {}, deMaison = c => /Providence/.test(c.label);
+  const nomType = { whatsapp: "WhatsApp", email: "E-mail", facebook: "Facebook" };
+  const lignes = liste => liste.map(c => ({ type: c.type, titre: nomType[c.type] || c.label, valeur: c.valeur, lien: c.lien }));
+  const maison = lignes(CFG.contacts.filter(deMaison));
+  if (E.facebook) maison.push({ type: "facebook", titre: "Facebook", valeur: E.facebook, lien: "" });
+  if (E.adresse) maison.push({ type: "lieu", titre: "Adresse", valeur: E.adresse, lien: "https://www.google.com/maps/search/?api=1&query=" + encodeURIComponent(E.adresse) });
+  return [
+    { nom: "Docteur B. Silas Gbavou", role: "Auteur · Enseignant de la Parole", image: CFG.auteur.photoBuste, rond: true, lignes: lignes(CFG.contacts.filter(c => !deMaison(c))), appel: lienAssistance(" "), appelTexte: "Écrire à l'auteur" },
+    { nom: "Providence Éditions Prestige", role: "Maison d'édition · " + (E.devise || "Édition • Qualité • Excellence"), image: E.marque, rond: false, lignes: maison, appel: wa(CFG.vente.whatsappCommandes, "Bonjour Providence Éditions Prestige, "), appelTexte: "Écrire à la maison d'édition" }
+  ];
+}
+function ligneContact(x) {
+  const corps = `<span class="pico ${x.type}">${IC[x.type] || ""}</span><span class="lc-txt"><small>${esc(x.titre)}</small><b>${esc(x.valeur)}</b></span>`;
+  return x.lien
+    ? `<a class="ligne-contact" href="${esc(x.lien)}" ${x.type === "email" ? "" : 'target="_blank" rel="noopener"'} data-sortie="${x.type}">${corps}<span class="fleche">${IC.fleche}</span></a>`
+    : `<div class="ligne-contact">${corps}</div>`;
+}
+function contacts() {
+  return `<div class="contacts">${groupesContacts().map(g => `<article class="fiche-contact revele">
+    <header><span class="fc-visuel${g.rond ? " rond" : ""}"><img src="${esc(g.image)}" alt="" width="58" height="58" loading="lazy"></span><span><b>${esc(g.nom)}</b><small>${esc(g.role)}</small></span></header>
+    <div class="fc-lignes">${g.lignes.map(ligneContact).join("")}</div>
+    <a class="btn btn-wa btn-petit" href="${esc(g.appel)}" target="_blank" rel="noopener" data-sortie="whatsapp">${IC.wa}${esc(g.appelTexte)}</a>
+  </article>`).join("")}</div>`;
+}
+const contactWA = () => CFG.contacts.find(c => c.type === "whatsapp") || { valeur: "", lien: "https://wa.me/" + CFG.vente.whatsappCommandes };
+const etapes = () => `<ol class="etapes">
+  ${[["Choisir", "Un livre, plusieurs, ou toute la collection."],
+     ["Se procurer", "Touchez « Se procurer » : la page de paiement sécurisée s'ouvre."],
+     ["Régler", "Par Mobile Money ou carte bancaire, en toute sécurité."],
+     ["Recevoir", "Le PDF vous est remis automatiquement, prêt à lire."]]
+    .map((e, i) => `<li class="etape revele"><div class="ruban"><b>${deux(i + 1)}</b>Étape</div><h3>${e[0]}</h3><p>${e[1]}</p></li>`).join("")}
+</ol>`;
+const IC_LECTURE = `<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 5.5v13a1 1 0 0 0 1.5.9l10.4-6.5a1 1 0 0 0 0-1.8L9.5 4.6A1 1 0 0 0 8 5.5Z"/></svg>`;
+function carteVideo(x) {
+  const coll = x.livre === "collection", l = coll ? null : LIVRES.find(b => b.slug === x.livre);
+  if (!coll && !l) return "";
+  const titreLivre = coll ? `La collection complète · ${LIVRES.length} ouvrages` : l.titre;
+  const prix = coll ? CFG.vente.prixCollection : l.prix;
+  const id = coll ? "collection" : l.id;
+  const appel = `<button class="btn btn-principal btn-petit btn-eclat" type="button" data-procurer="${id}">${coll ? "Acquérir la collection" : "Acquérir ce livre"}</button>`;
+  return `<article class="carte-video revele">
+    <div class="video-cadre ${x.format === "vertical" ? "vertical" : "horizontal"}">
+      <video src="${esc(x.fichier)}" poster="${esc(x.affiche || "")}" preload="none" playsinline controls controlslist="nodownload" aria-label="${esc(x.type + " : " + x.titre)}"></video>
+      <span class="badge-video">${esc(x.type)}</span>
+      <div class="video-fin" aria-hidden="true">
+        <p class="vf-sur">Vous avez aimé cet aperçu ?</p>
+        <p class="vf-titre">${esc(titreLivre)}</p>
+        ${prix ? `<p class="vf-prix num">${px(prix)}</p>` : ""}
+        <div class="vf-actions">${appel}<button class="btn btn-capsule btn-petit" type="button" data-revoir>Revoir</button></div>
+      </div>
+    </div>
+    <div class="cv-corps">
+      ${coll ? `<img class="cv-couv" src="${esc(CFG.vente.collectionVisuel || mini(LIVRES[0]))}" alt="" width="56" height="56" loading="lazy">` : `<a href="#livre-${l.slug}" class="cv-couv-lien" tabindex="-1" aria-hidden="true"><img class="cv-couv" src="${mini(l)}" alt="" width="56" height="79" loading="lazy"></a>`}
+      <div class="cv-texte">
+        <h3>${esc(x.titre)}</h3>
+        <p class="cv-livre">${coll ? esc(titreLivre) : `<a href="#livre-${l.slug}">${esc(l.titre)}</a>`}</p>
+        ${prix ? `<p class="cv-prix num">${px(prix)}</p>` : ""}
+      </div>
+    </div>
+    <div class="cv-actions">${appel}${coll ? `<a class="btn btn-capsule btn-petit" href="#catalogue">Voir les ouvrages</a>` : `<a class="btn btn-capsule btn-petit" href="#livre-${l.slug}">Découvrir</a>`}</div>
+  </article>`;
+}
+function blocVideos(filtreV, limite) {
+  const v = (CFG.vente.videos || []).filter(x => x.fichier && (!filtreV || filtreV(x))).slice(0, limite || 99);
+  if (!v.length) return "";
+  return `<div class="grille-videos">${v.map(carteVideo).join("")}</div>`;
+}
+
+/* Note de l'éditeur : nature contributive des montants */
+function noteEditeur(court) {
+  if (court) return `<p class="note-editeur court"><b>NB.</b> Montants fixés au coût de production, sans marge commerciale, pour soutenir l'œuvre d'édition.</p>`;
+  return `<aside class="note-editeur revele" aria-labelledby="nb-titre">
+    <div class="ne-texte">
+      <span class="pastille-info"><i></i>Note de l'éditeur</span>
+      <h2 id="nb-titre">Une œuvre d'édition, <span class="b">non une démarche lucrative</span></h2>
+      <p>Ces ouvrages ne sont pas publiés dans un but commercial. Ils sont mis à disposition au coût de production, sans marge bénéficiaire.</p>
+      <p>Chaque livre engage pourtant des dépenses importantes : rédaction, relecture doctrinale, correction, mise en page, conception graphique et diffusion. La contribution demandée reste modeste au regard de cet investissement ; elle en couvre une part et permet la publication des ouvrages à venir.</p>
+      <p>Chacun demeure libre d'aller au-delà de ce montant, dans l'esprit de la Parole :</p>
+      <blockquote>« Que chacun donne comme il l'a résolu en son cœur, sans tristesse ni contrainte ; car Dieu aime celui qui donne avec joie. »<cite>2 Corinthiens 9:7</cite></blockquote>
+      <a class="btn btn-capsule btn-petit" target="_blank" rel="noopener" data-sortie="soutien" href="${wa(CFG.vente.whatsappCommandes, "Bonjour Providence Éditions Prestige, je souhaite soutenir l'œuvre d'édition des livres du Docteur B. Silas Gbavou.")}">Soutenir l'œuvre d'édition</a>
+    </div>
+    <ul class="ne-reperes" aria-label="En résumé">
+      <li><span class="pe-ico">${IC.piece}</span><b>Au coût de production</b><span>Rédaction, relecture, mise en page, conception, diffusion.</span></li>
+      <li><span class="pe-ico">${IC.bouclier}</span><b>Sans marge bénéficiaire</b><span>Aucun profit commercial n'est recherché.</span></li>
+      <li><span class="pe-ico">${IC.livreOuvert}</span><b>Pour les ouvrages à venir</b><span>Chaque contribution soutient la suite de l'œuvre.</span></li>
+    </ul>
+  </aside>`;
+}
+function blocCollection() {
+  return `<div class="collection">
+    <div>
+      <span class="pastille-info"><i></i>Collection complète</span>
+      <h2 style="margin-top:16px">L'intégralité des ouvrages en une seule acquisition</h2>
+      <p style="margin:14px 0 18px">Pour les leaders, les écoles bibliques et les groupes d'étude qui veulent recevoir l'enseignement dans son ensemble.</p>
+      <div class="prix-collection"><p class="num">${CFG.vente.prixCollection ? px(CFG.vente.prixCollection) : "Prix sur demande"}</p>${selecteurDevise("devises-clair")}</div>
+      ${infoDevise()}
+      ${(() => { const t = LIVRES.reduce((s, l) => s + (l.prix || 0), 0); return CFG.vente.prixCollection && LIVRES.every(l => l.prix) ? `<p style="margin-bottom:20px;font-size:15px">Achetés séparément, les ${LIVRES.length} livres représentent ${px(t, "texte")}. La collection vous fait économiser ${px(t - CFG.vente.prixCollection, "texte")}.</p>` : `<div style="margin-bottom:20px"></div>`; })()}
+      <button class="btn btn-capsule btn-eclat" type="button" data-procurer="collection">Se procurer la collection</button>
+    </div>
+    <div class="mur" aria-hidden="true">${LIVRES.map(l => `<img src="${mini(l)}" alt="" loading="lazy" width="420" height="595">`).join("")}</div>
+  </div>`;
+}
+const vagues = `<svg class="vagues" viewBox="0 0 1440 200" preserveAspectRatio="none" aria-hidden="true">
+  <defs><linearGradient id="vg1" x1="0" x2="1"><stop offset="0" stop-color="#103FA8"/><stop offset=".6" stop-color="#1450D2"/><stop offset="1" stop-color="#08A4D6"/></linearGradient></defs>
+  <path d="M0 120 C 260 60 520 170 820 112 S 1260 40 1440 92 V200 H0Z" fill="#EAF3FC"/>
+  <path d="M0 150 C 300 100 560 196 880 150 S 1280 90 1440 130 V200 H0Z" fill="url(#vg1)" opacity=".92"/>
+  <path d="M0 168 C 340 130 620 204 940 172 S 1300 128 1440 156" fill="none" stroke="#F3C623" stroke-width="3" stroke-linecap="round"/>
+  <path d="M0 184 C 360 160 660 210 980 190 S 1320 162 1440 178 V200 H0Z" fill="#fff"/>
+</svg>`;
+const enTete = (pastille, titre, chapeau) => `<span class="pastille-info"><i></i>${pastille}</span><h1 style="margin-top:16px">${titre}</h1>${chapeau ? `<p class="chapeau" style="margin-top:14px">${chapeau}</p>` : ""}`;
+
+/* ---------- Pages ---------- */
+function pageAccueil() {
+  const A = CFG.auteur;
+  const pile = ["08", "01", "10"].map(id => LIVRES.find(l => l.id === id)).filter(Boolean);
+  const choix = ["01", "08", "06", "13"].map(id => LIVRES.find(l => l.id === id)).filter(Boolean);
+  const pages = LIVRES.reduce((s, l) => s + (l.pages || 0), 0).toLocaleString("fr-FR").replace(/ | /g, " ");
+  return `
+  <section class="hero"><div class="wrap hero-grille">
+    <div>
+      <span class="pastille-info" data-enter><i></i>Librairie numérique · Providence Éditions Prestige</span>
+      <h1 data-enter="2" tabindex="-1">La librairie du <span class="b">Docteur B. Silas Gbavou</span></h1>
+      <p class="chapeau" data-enter="3">Des ouvrages doctrinaux et prophétiques pour comprendre les mystères de la Parole, bâtir une vie de prière solide et servir Dieu avec onction. Plus de ${pages} pages d'enseignement structuré, à lire dès aujourd'hui sur votre téléphone, votre tablette ou votre ordinateur.</p>
+      <ul class="atouts" data-enter="3"><li>Enseignement biblique structuré</li><li>Remise immédiate du PDF</li><li>Paiement sécurisé : Mobile Money ou carte</li></ul>
+      <div class="actions" data-enter="4">
+        <a class="btn btn-principal btn-eclat" href="#tous-les-ouvrages" data-defile="tous-les-ouvrages">Découvrir les ouvrages</a>
+        <a class="btn btn-capsule" href="#parcours" data-defile="parcours">Comment acquérir un livre</a>
+      </div>
+      <div class="carte-auteur" data-enter="4"><img src="${esc(A.photoBuste)}" alt="" width="54" height="54"><span><b>Docteur B. Silas Gbavou</b>Enseignant de la Parole de Dieu et scribe prophétique</span></div>
+    </div>
+    <div class="vitrine" aria-hidden="true" data-enter="3"><div class="halo"></div>${pile.map(l => livre3d(l, true)).join("")}<span class="etiquette">Providence Éditions Prestige</span></div>
+  </div>${vagues}</section>
+
+  <section style="padding-top:clamp(28px,4vw,48px)"><div class="wrap">
+    <div class="section-tete"><div><span class="pastille-info"><i></i>Sélection</span><h2 style="margin-top:14px">Quatre portes <span class="b">d'entrée</span></h2><p class="chapeau">L'onction, le prophétique, la prière et le ministère de la Parole.</p></div><a class="btn btn-capsule btn-petit" href="#catalogue">Tout le catalogue</a></div>
+    <div class="grille">${choix.map(l => carte(l)).join("")}</div>
+  </div></section>
+
+  <section class="fond-bleu" id="parcours"><div class="wrap">
+    <div class="section-tete"><div><span class="pastille-info"><i></i>Parcours de commande</span><h2 style="margin-top:14px">Acquérir un livre en <span class="b">quatre étapes</span></h2><p class="chapeau">Paiement sécurisé par Mobile Money ou carte bancaire. Une question ? L'auteur vous répond directement sur WhatsApp.</p></div></div>
+    ${etapes()}
+  </div></section>
+
+  ${(CFG.vente.videos || []).some(v => v.fichier) ? `<section><div class="wrap">
+    <div class="section-tete"><div><span class="pastille-info"><i></i>En vidéo</span><h2 style="margin-top:14px">Les ouvrages <span class="b">présentés en vidéo</span></h2><p class="chapeau">Découvrez l'esprit de chaque livre en quelques instants, puis acquérez-le directement.</p></div><a class="btn btn-capsule btn-petit" href="#videos">Toutes les vidéos</a></div>
+    ${blocVideos(x => /^Pr/.test(x.type) && x.livre !== "collection", 3)}</div></section>` : ""}
+
+  <section><div class="wrap">
+    <div class="section-tete" id="tous-les-ouvrages"><div><span class="pastille-info"><i></i>La librairie</span><h2 style="margin-top:14px">Tous les <span class="b">ouvrages</span></h2><p class="chapeau">L'ensemble des livres du Docteur B. Silas Gbavou, réunis en ${THEMES.length} grands thèmes. Choisissez, acquérez, lisez aussitôt.</p></div><a class="btn btn-principal btn-petit" href="#catalogue">Parcourir et filtrer</a></div>
+    <div class="grille">${LIVRES.map(l => carte(l)).join("")}</div>
+  </div></section>
+
+  <section style="padding-top:0"><div class="wrap">${blocCollection()}</div></section>
+
+  <section style="padding-top:0"><div class="wrap">${noteEditeur()}</div></section>
+
+  <section class="fond-bleu"><div class="wrap auteur-bande">
+    <div class="portrait"><div class="cadre"><img src="${esc(A.photo)}" alt="Docteur B. Silas Gbavou" loading="lazy" width="960" height="1200"></div></div>
+    <div>
+      <span class="pastille-info"><i></i>L'auteur</span>
+      <h2 style="margin-top:14px">Docteur B. Silas Gbavou</h2>
+      <p class="chapeau" style="margin-top:12px">${esc(A.bioCourte)}</p>
+      <p class="parole">${esc(A.citation)}</p>
+      <div class="mini-galerie">${A.galerie.slice(0, 2).map(g => `<img src="${esc(g)}" alt="Docteur B. Silas Gbavou" loading="lazy" width="160" height="120">`).join("")}</div>
+      <div class="actions"><a class="btn btn-principal" href="#auteur">Lire la biographie</a><a class="btn btn-capsule" href="#editeur">L'éditeur</a></div>
+    </div>
+  </div></section>
+
+  <section class="faq"><div class="wrap" style="max-width:860px">
+    <div class="section-tete"><div><span class="pastille-info"><i></i>Questions fréquentes</span><h2 style="margin-top:14px">Avant de vous <span class="b">procurer un livre</span></h2></div><a class="btn btn-capsule btn-petit" href="#aide">Toute l'aide</a></div>
+    ${faq().slice(0, 4).join("")}
+  </div></section>
+
+  <section style="padding-top:0"><div class="wrap">
+    <div class="section-tete"><div><span class="pastille-info"><i></i>Contact</span><h2 style="margin-top:14px">L'auteur et l'éditeur <span class="b">à votre écoute</span></h2><p class="chapeau">Touchez un contact pour écrire sur WhatsApp, par e-mail ou sur Facebook.</p></div><a class="btn btn-capsule btn-petit" href="#contact">Page contact</a></div>
+    ${contacts()}
+    ${blocNouveautes()}
+  </div></section>`;
+}
+function blocNouveautes() {
+  return `<div class="panneau" style="margin-top:22px;display:grid;gap:12px">
+    <h3>Recevoir l'annonce des nouveaux livres</h3>
+    <p style="color:var(--texte-2);font-size:15px">Inscription séparée de toute commande. En touchant le bouton, vous envoyez vous-même une demande d'inscription sur WhatsApp. Pour vous désinscrire à tout moment, écrivez « STOP » au même numéro.</p>
+    <div><a class="btn btn-wa btn-petit" target="_blank" rel="noopener" data-sortie="nouveautes" href="${wa(CFG.vente.whatsappCommandes, "Bonjour Providence Éditions Prestige, je souhaite recevoir sur WhatsApp l'annonce des nouveaux livres du Docteur B. Silas Gbavou. (Je pourrai me désinscrire en écrivant STOP.)")}">${IC.wa}M'inscrire aux nouveautés</a></div>
+  </div>`;
+}
+let filtre = "Tous", recherche = "";
+const normal = s => s.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "");
+function listeFiltree() {
+  const q = normal(recherche.trim());
+  return LIVRES.filter(l => (filtre === "Tous" || l.theme === filtre) && (!q || normal([l.titre, l.sous, l.theme, ...(l.cles || [])].join(" ")).includes(q)));
+}
+function grilleCatalogue() {
+  const liste = listeFiltree();
+  return liste.length ? liste.map(l => carte(l, "h2")).join("") : `<p class="chapeau" style="grid-column:1/-1">Aucun livre ne correspond. <button class="btn btn-capsule btn-petit" type="button" data-reinit>Tout afficher</button></p>`;
+}
+const texteResultat = () => { const n = listeFiltree().length; return `${n} ${n > 1 ? "livres" : "livre"}${filtre !== "Tous" ? " · " + filtre : ""}`; };
+function pageCatalogue() {
+  return `<section style="padding-top:clamp(28px,4vw,48px)"><div class="wrap">
+    <div class="section-tete"><div>${enTete("Catalogue", `Les <span class="b">${LIVRES.length} livres</span>`, "Touchez une couverture pour lire la présentation complète.")}</div></div>
+    <div class="outils">
+      <div class="recherche">${IC.loupe}<label class="sr" for="q">Rechercher un livre</label><input id="q" type="search" placeholder="Rechercher un titre, un thème…" value="${esc(recherche)}" autocomplete="off"></div>
+      <div class="filtres" role="group" aria-label="Filtrer par thème">
+        ${["Tous", ...THEMES].map(t => `<button class="filtre" type="button" data-filtre="${esc(t)}" aria-pressed="${t === filtre}">${esc(t)}</button>`).join("")}
+      </div>
+    </div>
+    <p class="resultat" id="resultat" aria-live="polite">${esc(texteResultat())}</p>
+    <div class="grille" id="grille">${grilleCatalogue()}</div>
+  </div></section>
+  <section style="padding-top:0"><div class="wrap">${blocCollection()}</div></section>
+  <section style="padding-top:0"><div class="wrap">${noteEditeur()}</div></section>`;
+}
+function pageLivre(l) {
+  const autres = LIVRES.filter(x => x.theme === l.theme && x.id !== l.id).concat(LIVRES.filter(x => x.theme !== l.theme)).slice(0, 3);
+  const infos = [(l.pages ? l.pages + " pages" : null), l.format ? "Format " + l.format : null, "PDF", l.copyright ? "© " + l.copyright : null, l.date, l.isbn ? "ISBN " + l.isbn : null].filter(Boolean);
+  const vid = (CFG.vente.videos || []).find(v => v.livre === l.slug && v.fichier);
+  const urlLivre = (CFG.vente.urlCanonique || CFG.vente.urlSite || "") + "#livre-" + l.slug;
+  const titreSommaire = l.sommaireType === "parties" ? "Les grandes parties" : "Au fil des chapitres";
+  return `<section class="fiche"><div class="wrap">
+    <nav class="fil" aria-label="Fil d'Ariane"><a href="#catalogue">Les livres</a> › ${esc(l.theme)}</nav>
+    <div class="fiche-grille">
+      <div class="fiche-gauche">${livre3d(l, true)}</div>
+      <div>
+        <span class="theme" style="margin-top:0">${esc(l.theme)}</span>
+        <h1 tabindex="-1">${esc(l.titre)}</h1>
+        ${l.sous ? `<p class="sous">${esc(l.sous)}</p>` : ""}
+        <p class="par">Par ${esc(auteursTxt(l))}</p>
+        <div class="infos">${infos.map(i => `<span>${esc(i)}</span>`).join("")}</div>
+        <div class="offre">
+          <div class="entete-offre"><span>Livre numérique</span><b>PDF</b></div>
+          <div class="corps">
+            <div class="prix-bloc">${l.prix ? `<p class="prix-ligne num">${px(l.prix)}</p>` : `<p class="prix-ligne inconnu">Prix sur demande</p>`}${selecteurDevise("devises-petit")}</div>
+            ${infoDevise()}
+            <button class="btn btn-principal btn-large btn-eclat" type="button" data-procurer="${l.id}">Se procurer ce livre</button>
+            <button class="btn btn-capsule btn-large" type="button" data-ajouter="${l.id}">Ajouter à ma sélection</button>
+            ${l.extrait ? `<a class="btn btn-contour btn-large" href="${esc(l.extrait)}" target="_blank" rel="noopener" data-sortie="extrait">Lire un extrait</a>` : ""}
+            <ul class="garanties"><li>Paiement sécurisé : Mobile Money ou carte bancaire</li><li>PDF remis automatiquement après l'achat</li><li>Lecture sur téléphone, tablette ou ordinateur</li></ul>
+            ${noteEditeur(true)}
+            ${assistance(`j'ai une question concernant l'acquisition du livre « ${l.titre} ».`)}
+          </div>
+        </div>
+        ${l.pour ? `<p class="pour"><b>Pour qui ?</b> ${esc(l.pour)}</p>` : ""}
+        <div class="bloc"><h2>Présentation</h2>${l.description.map(p => `<p>${esc(p)}</p>`).join("")}</div>
+        ${vid ? `<div class="bloc"><h2>Le livre en vidéo</h2>${blocVideos(x => x.livre === l.slug)}</div>` : ""}
+        ${(l.cles || []).length ? `<div class="bloc"><h2>Ce que vous allez découvrir</h2>
+          <ul class="cles">${l.cles.map((k, i) => `<li><span class="cartouche" aria-hidden="true"><small>CLÉ</small><b>${deux(i + 1)}</b></span><p>${esc(k)}</p></li>`).join("")}</ul></div>` : ""}
+        ${(l.chapitres || []).length ? `<div class="bloc"><h2>${titreSommaire}</h2><ol class="bandes">${l.chapitres.map((ch, i) => `<li><span aria-hidden="true">${deux(i + 1)}</span><b>${esc(ch)}</b></li>`).join("")}</ol>
+          <p class="precision">${l.sommaireType === "extraits" ? "Aperçu de quelques chapitres : ce n'est pas le sommaire complet du livre." : "Aperçu tiré du livre. Le sommaire détaillé figure dans le PDF."}</p></div>` : ""}
+        ${l.citation ? `<div class="bloc"><blockquote class="citation">${esc(l.citation)}<small>${esc(l.titre)}${l.citation_page ? ", page " + l.citation_page + " du PDF" : ""}</small></blockquote></div>` : ""}
+        <div class="bloc"><h2>Partager ce livre</h2><div class="partage">
+          <a class="btn btn-wa btn-petit" target="_blank" rel="noopener" data-sortie="partage" href="https://wa.me/?text=${encodeURIComponent(l.titre + " — " + auteursTxt(l) + "\n" + urlLivre)}">${IC.wa}WhatsApp</a>
+          <a class="btn btn-capsule btn-petit" target="_blank" rel="noopener" data-sortie="partage" href="https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(urlLivre)}">Facebook</a>
+        </div></div>
+        <div class="bloc"><h2>Vous aimerez aussi</h2><div class="reco">
+          ${autres.map(x => `<a href="#livre-${x.slug}"><img src="${mini(x)}" alt="" loading="lazy" width="420" height="595"><span>${esc(x.titre)}</span></a>`).join("")}
+        </div></div>
+      </div>
+    </div>
+  </div></section>`;
+}
+function pageVideos() {
+  return `<section style="padding-top:clamp(28px,4vw,48px)"><div class="wrap">
+    <div class="section-tete"><div>${enTete("Vidéos", "Les ouvrages <span class=\"b\">en vidéo</span>", "Présentations et extraits d'enseignement : découvrez chaque livre, puis acquérez-le directement depuis la vidéo.")}</div></div>
+    <h2 class="titre-groupe">Présentations des ouvrages</h2>
+    ${blocVideos(x => !/^Extrait/.test(x.type))}
+    <h2 class="titre-groupe">Extraits d'enseignement</h2>
+    ${blocVideos(x => /^Extrait/.test(x.type)) || `<p class="chapeau">Les vidéos arrivent bientôt.</p>`}
+  </div></section>`;
+}
+function pageAuteur() {
+  const A = CFG.auteur, E = CFG.editeur;
+  return `<section style="padding-top:clamp(28px,4vw,48px)"><div class="wrap auteur-bande">
+    <div class="portrait"><div class="cadre"><img src="${esc(A.photo)}" alt="Docteur B. Silas Gbavou" width="960" height="1200"></div>
+      <div class="sceau"><img src="${esc(E.marque)}" alt="" width="30" height="35">Providence<br>Éditions Prestige</div></div>
+    <div>
+      ${enTete("L'auteur", "Docteur B. Silas Gbavou", "")}
+      <div class="fonctions">${A.fonctions.map(f => `<span>${esc(f)}</span>`).join("")}</div>
+      ${A.bio.slice(0, 2).map(p => `<p class="chapeau" style="margin-bottom:14px">${esc(p)}</p>`).join("")}
+      <p class="note">${esc(A.noteTitre)}</p>
+    </div>
+  </div></section>
+
+  <section class="fond-bleu"><div class="wrap deux-col">
+    <div>
+      <h2>Ministère et enseignement</h2>
+      ${A.bio.slice(2).map(p => `<p style="margin-top:14px;max-width:62ch">${esc(p)}</p>`).join("")}
+      <p style="margin-top:14px;max-width:62ch">${esc(A.vision)}</p>
+    </div>
+    <div class="galerie">${A.galerie.map(g => `<img src="${esc(g)}" alt="Docteur B. Silas Gbavou" loading="lazy">`).join("")}</div>
+  </div></section>
+
+  <section><div class="wrap deux-col">
+    <div>
+      <h2>L'écrivain</h2>
+      <p style="margin:14px 0 18px;max-width:62ch">Son activité littéraire est principalement consacrée à la théologie biblique, à l'enseignement doctrinal et à la formation chrétienne. Il considère l'écriture comme un moyen de préserver, de structurer et de transmettre les enseignements de la Parole de Dieu aux générations présentes et futures.</p>
+      <ul class="points">${A.ecriture.map(e => `<li>${esc(e)}</li>`).join("")}</ul>
+    </div>
+    <div><blockquote class="citation">${esc(A.citation)}<small>Docteur B. Silas Gbavou</small></blockquote>
+      <div class="actions" style="margin-top:20px"><a class="btn btn-principal" href="#catalogue">Voir ses livres</a><a class="btn btn-capsule" href="#editeur">L'éditeur</a></div></div>
+  </div></section>
+
+  <section style="padding-top:0"><div class="wrap">
+    <div class="section-tete"><h2>Contacts</h2></div>
+    ${contacts()}
+  </div></section>`;
+}
+function pageEditeur() {
+  const E = CFG.editeur, I = CFG.infosLegales || {};
+  return `<section style="padding-top:clamp(28px,4vw,48px)"><div class="wrap deux-col">
+    <div class="page-texte">
+      ${enTete("L'éditeur", "Providence Éditions Prestige", `Maison d'édition de ${esc(CFG.structure)}, au ${esc(CFG.pays)}.`)}
+      <p style="margin-top:16px">${esc(E.fonction)}. ${esc(E.vocation)}</p>
+      <h2>Identité</h2>
+      <ul>
+        <li>Structure : ${esc(CFG.structure)}</li>
+        <li>Pays : ${esc(CFG.pays)}</li>
+        <li>Responsable : Docteur B. Silas Gbavou, promoteur et directeur général</li>
+        <li>Adresse professionnelle : ${I.adresseProfessionnelle ? esc(I.adresseProfessionnelle) : "non publiée sur ce site"}</li>
+        ${I.rccm ? `<li>RCCM : ${esc(I.rccm)}</li>` : ""}${I.ifu ? `<li>IFU : ${esc(I.ifu)}</li>` : ""}
+      </ul>
+      <h2>Savoir-faire</h2>
+      <ul>${E.competences.map(c => `<li>${esc(c)}</li>`).join("")}</ul>
+      <p class="note">Philosophie éditoriale : ${esc(E.philosophie)}</p>
+    </div>
+    <div><div class="logo-support"><img src="${esc(E.logo)}" alt="Providence Éditions Prestige" width="300" height="229"></div>
+      <p style="text-align:center;margin-top:12px;font-weight:700;color:var(--texte-2)">${esc(E.devise)}</p></div>
+  </div></section>
+  <section style="padding-top:0"><div class="wrap"><div class="section-tete"><h2>Contacts</h2></div>${contacts()}</div></section>`;
+}
+function pageConditions() {
+  const I = CFG.infosLegales || {};
+  return `<section style="padding-top:clamp(28px,4vw,48px)"><div class="wrap page-texte">
+    ${enTete("Informations", "Conditions de vente", "Ce qu'il faut savoir avant de commander un livre numérique.")}
+    <h2>Ce que vous achetez</h2>
+    <p>Des livres numériques au format PDF, pour un usage personnel. Chaque fiche indique le nombre de pages et le format du livre.</p>
+    <h2>Nature des montants</h2>
+    <p>Les montants sont fixés au coût de production, sans marge commerciale, afin de soutenir la publication des prochains ouvrages.</p>
+    <h2>Paiement</h2>
+    <p>Le règlement s'effectue en ligne, en FCFA, sur notre page de paiement sécurisée : Mobile Money ou carte bancaire. Les équivalences en euros ou en dollars affichées sur le site sont indicatives.</p>
+    <h2>Conclusion de l'acquisition</h2>
+    <p>L'acquisition est conclue à la confirmation du paiement ; le PDF vous est alors remis automatiquement. Pour toute question, l'auteur vous répond directement sur WhatsApp.</p>
+    <div class="liens-infos"><a class="btn btn-capsule btn-petit" href="#livraison">Livraison et problèmes</a><a class="btn btn-capsule btn-petit" href="#confidentialite">Confidentialité</a></div>
+  </div></section>`;
+}
+function pageLivraison() {
+  const W = CFG.contacts.find(c => c.type === "whatsapp" && c.lien.includes(numAssistance())) || contactWA();
+  return `<section style="padding-top:clamp(28px,4vw,48px)"><div class="wrap page-texte">
+    ${enTete("Informations", "Livraison et assistance", "Comment le livre vous parvient, et à qui écrire en cas de besoin.")}
+    <h2>Comment le PDF vous est remis</h2>
+    <p>Dès la confirmation du paiement, le PDF vous est remis automatiquement par notre page de paiement sécurisée. Les livres ne sont jamais déposés à une adresse publique sur ce site.</p>
+    <h2>Délai</h2>
+    <p>La remise intervient dès la confirmation du paiement par votre opérateur Mobile Money ou votre banque.</p>
+    <h2>Si le paiement échoue</h2>
+    <ul><li>Ne refaites pas le paiement tout de suite.</li><li>Gardez le message de votre opérateur Mobile Money ou de votre banque.</li><li>Écrivez à l'auteur sur WhatsApp avec ce message : il vérifie avant toute nouvelle tentative.</li></ul>
+    <h2>Si vous avez payé sans recevoir le livre</h2>
+    <ul><li>Envoyez à l'auteur, sur WhatsApp, votre nom, le titre du livre et la référence de paiement.</li><li>Vérifiez aussi vos courriers indésirables.</li></ul>
+    <p style="margin-top:20px"><a class="btn btn-wa" target="_blank" rel="noopener" data-sortie="assistance" href="${esc(lienAssistance("j'ai une préoccupation concernant mon paiement.\nTitre du livre :\nRéférence de paiement :"))}">${IC.wa}Écrire à l'auteur</a></p>
+    <p class="note">WhatsApp de l'auteur : ${esc(W.valeur)}</p>
+  </div></section>`;
+}
+function pageConfidentialite() {
+  return `<section style="padding-top:clamp(28px,4vw,48px)"><div class="wrap page-texte">
+    ${enTete("Informations", "Confidentialité", "Ce que ce site garde, et ce qu'il ne garde pas.")}
+    <h2>Sur votre appareil</h2>
+    <ul>
+      <li>La liste des livres de votre sélection et la devise d'affichage choisie restent dans votre navigateur.</li>
+      <li>Le site n'a pas de base de données : il ne reçoit ni votre nom, ni votre numéro, ni votre e-mail.</li>
+    </ul>
+    <h2>Quand vous réglez</h2>
+    <p>Le règlement s'effectue sur notre page de paiement sécurisée, qui traite seule vos données de paiement : ce site n'en reçoit aucune. Si vous écrivez sur WhatsApp, vous envoyez vous-même votre message.</p>
+    <h2>Équivalences de devises</h2>
+    <p>Pour afficher une équivalence en dollars, le site peut consulter un service public de taux de change. Aucune donnée personnelle n'est transmise.</p>
+    <h2>Mesure d'audience</h2>
+    <p>Le site peut compter des actions anonymes (livre consulté, ajout à la sélection, ouverture de la page de paiement), sans nom, numéro ni e-mail.</p>
+    <h2>Nouveautés</h2>
+    <p>L'inscription aux nouveautés est séparée de la commande et jamais cochée d'avance. Pour vous désinscrire, écrivez « STOP » sur WhatsApp.</p>
+    <p style="margin-top:20px"><button class="btn btn-capsule" type="button" data-effacer>Effacer les données de ce site sur mon appareil</button></p>
+  </div></section>`;
+}
+
+function pageCommande() {
+  const a = articles();
+  const message = stock.lire("sessionStorage", "pep-avis");
+  stock.ecrire("sessionStorage", "pep-avis", null);
+  const bandeauRetires = retires.length ? `<div class="avis" role="status">${IC.alerte}<div>${retires.length > 1 ? "Ces livres ne sont plus disponibles et ont été retirés" : "Ce livre n'est plus disponible et a été retiré"} : ${esc(retires.join(", "))}.</div></div>` : "";
+  retires = [];
+  const bandeauAvis = message ? `<div class="avis" role="status">${IC.info}<div>${esc(message.texte)}${message.annuler ? `<br><button class="btn btn-capsule btn-petit" type="button" data-annuler='${esc(JSON.stringify(message.annuler))}'>Annuler ce changement</button>` : ""}</div></div>` : "";
+  if (!a.length) return `<section class="commande"><div class="wrap" style="max-width:720px">${bandeauRetires}${bandeauAvis}
+    <div class="panneau" style="text-align:center"><h1 tabindex="-1" style="font-size:clamp(28px,5vw,40px)">Votre sélection est vide</h1>
+    <p class="chapeau" style="margin:10px auto 22px">Choisissez un ou plusieurs livres dans le catalogue.</p>
+    <a class="btn btn-principal" href="#catalogue">Voir les livres</a></div></div></section>`;
+  const t = totalConnu(), liens = liensPaiement();
+  return `<section class="commande"><div class="wrap">
+    ${enTete("Ma sélection", "Finaliser mon acquisition", "")}
+    <ol class="etat-parcours" aria-label="Étapes"><li>Choix des livres</li><li aria-current="step">Règlement sécurisé</li><li>Remise du PDF</li></ol>
+    ${bandeauRetires}${bandeauAvis}
+    <div class="cmd-grille">
+      <div class="panneau">
+        <div class="panneau-tete"><h2>Vos livres <span class="num" style="color:var(--texte-2);font-weight:700">(${nbArticles()})</span></h2>${selecteurDevise("devises-petit")}</div>
+        ${panier.collection
+          ? `<div class="art"><img src="${mini(LIVRES[0])}" alt="" width="52" height="74"><div><b>Collection complète — ${LIVRES.length} livres</b><small>PDF · ${CFG.vente.prixCollection ? px(CFG.vente.prixCollection) : "prix sur demande"}</small></div><button class="retirer" type="button" data-vider aria-label="Retirer la collection">${IC.croix}</button></div>`
+          : a.map(l => `<div class="art"><img src="${mini(l)}" alt="" width="52" height="74"><div><b>${esc(l.titre)}</b><small>${l.prix ? px(l.prix) : "Prix sur demande"}</small></div><button class="retirer" type="button" data-retirer="${l.id}" aria-label="Retirer ${esc(l.titre)}">${IC.croix}</button></div>`).join("")}
+        <div class="total"><span>Total</span>${t ? `<span class="num">${px(t)}</span>` : `<span class="inconnu">Sur demande</span>`}</div>
+        ${infoDevise()}
+        <div class="actions" style="margin-top:16px">${panier.collection ? `<a class="btn btn-capsule btn-petit" href="#catalogue">Revenir au catalogue</a>` : `<a class="btn btn-capsule btn-petit" href="#catalogue">Ajouter un livre</a>${a.length < LIVRES.length ? `<button class="btn btn-contour btn-petit" type="button" data-collection>Prendre la collection complète</button>` : ""}`}</div>
+      </div>
+      <div class="panneau reglement">
+        <h2>Règlement sécurisé</h2>
+        ${liens
+          ? `<p class="aide-reglement">${liens.length > 1 ? "Chaque livre se règle sur sa page de paiement sécurisée. Touchez « Acquérir » pour chacun d'eux." : "Touchez « Acquérir » : la page de paiement sécurisée s'ouvre."}</p>
+          <div class="paiements">${liens.map((x, i) => `<div class="paiement-livre"><div><b>${esc(x.titre)}</b>${x.prix ? `<small class="num">${px(x.prix)}</small>` : ""}<span class="statut-ligne" aria-live="polite"></span></div><button class="btn btn-principal btn-petit" type="button" data-regler="${i}">Acquérir<span class="sr"> ${esc(x.titre)}</span></button></div>`).join("")}</div>`
+          : `<div class="info">${IC.info}<span>La collection complète sera très prochainement proposée en un seul règlement sécurisé. Pour la recevoir dès maintenant, écrivez à l'auteur sur WhatsApp.</span></div>
+          <a class="btn btn-wa" style="margin-top:14px" href="${esc(lienAssistance("je souhaite acquérir la collection complète de vos livres."))}" target="_blank" rel="noopener" data-sortie="assistance">${IC.wa}Demander la collection</a>`}
+        <ul class="garanties" style="margin-top:18px"><li>Paiement sécurisé : Mobile Money ou carte bancaire</li><li>Règlement en FCFA, PDF remis automatiquement</li><li>Lecture sur téléphone, tablette ou ordinateur</li></ul>
+        ${noteEditeur(true)}
+        ${assistance("j'ai une question concernant l'acquisition de mes livres.")}
+      </div>
+    </div>
+  </div></section>`;
+}
+function faq() {
+  const W = CFG.contacts.find(c => c.type === "whatsapp" && c.lien.includes(numAssistance())) || contactWA();
+  return [
+    ["Sous quel format sont les livres ?", "En PDF, lisible sur téléphone Android ou iPhone, tablette ou ordinateur, sans application payante."],
+    ["Quel est le prix ?", "Chaque fiche affiche son montant officiel en FCFA. Le sélecteur FCFA, € ou $ donne une équivalence indicative ; le règlement s'effectue toujours en FCFA."],
+    ["Comment acheter un livre ?", "Touchez « Se procurer » : la page de paiement sécurisée s'ouvre (Mobile Money ou carte bancaire) et le PDF vous est remis automatiquement après le règlement."],
+    ["Pourquoi ces montants ?", "Ils sont fixés au coût de production, sans marge commerciale, pour soutenir la publication des prochains ouvrages."],
+    ["Puis-je régler depuis l'étranger ?", "Oui, par carte bancaire. Le montant est prélevé en FCFA ; si votre carte est en euros ou en dollars, votre banque effectue la conversion."],
+    ["Quand vais-je recevoir mon livre ?", "Automatiquement, dès la confirmation du paiement."],
+    ["Puis-je partager mon PDF ?", "Non. Chaque livre est protégé par le droit d'auteur : toute reproduction ou revente sans l'autorisation écrite de l'auteur est interdite."],
+    ["Je n'ai pas reçu mon livre.", `Écrivez à l'auteur sur WhatsApp au ${W.valeur} avec votre nom, le titre et la référence de paiement.`]
+  ].map((q, i) => `<details${i === 0 ? " open" : ""}><summary>${esc(q[0])}</summary><p>${esc(q[1])}</p></details>`);
+}
+function pageAide() {
+  return `<section class="faq" style="padding-top:clamp(28px,4vw,48px)"><div class="wrap" style="max-width:860px">
+    ${enTete("Aide", "Questions fréquentes", "")}
+    <div style="margin-top:24px">${faq().join("")}</div>
+    <div class="liens-infos"><a class="btn btn-capsule btn-petit" href="#livraison">Livraison et problèmes</a><a class="btn btn-capsule btn-petit" href="#conditions">Conditions de vente</a><a class="btn btn-capsule btn-petit" href="#confidentialite">Confidentialité</a><a class="btn btn-capsule btn-petit" href="#editeur">L'éditeur</a></div>
+    <div style="margin-top:34px">${contacts()}</div>
+    ${blocNouveautes()}
+  </div></section>`;
+}
+function pageContact() {
+  return `<section style="padding-top:clamp(28px,4vw,48px)"><div class="wrap">
+    <div class="section-tete"><div>${enTete("Contact", "Nous <span class=\"b\">contacter</span>", "L'auteur et la maison d'édition vous répondent directement, sur WhatsApp, par e-mail ou sur Facebook.")}</div></div>
+    ${contacts()}
+    <div class="panneau bloc-assistance revele">
+      <span class="pe-ico">${IC.bouclier}</span>
+      <div><h3>Une préoccupation liée à un paiement ?</h3><p>Indiquez votre nom, le titre du livre et la référence de paiement : votre demande sera traitée plus rapidement.</p></div>
+      <a class="btn btn-wa btn-petit" target="_blank" rel="noopener" data-sortie="assistance" href="${esc(lienAssistance("j'ai une préoccupation concernant mon paiement.\nTitre du livre :\nRéférence de paiement :"))}">${IC.wa}Écrire à l'auteur</a>
+    </div>
+    ${blocNouveautes()}
+  </div></section>`;
+}
+function piedEditeur() {
+  const E = CFG.editeur || {}, A = E.annonce; if (!A) return "";
+  const [t1, t2] = A.titre.split(/ (?=au )/);
+  const icones = [IC.plume, IC.livreOuvert, IC.image, IC.isbn];
+  const coord = [
+    E.whatsapp && { type: "whatsapp", txt: E.whatsapp, lien: "https://wa.me/" + CFG.vente.whatsappCommandes },
+    E.email && { type: "email", txt: E.email, lien: "mailto:" + E.email },
+    E.facebook && { type: "facebook", txt: E.facebook },
+    E.adresse && { type: "lieu", txt: E.adresse, lien: "https://www.google.com/maps/search/?api=1&query=" + encodeURIComponent(E.adresse) }
+  ].filter(Boolean);
+  return `<div class="wrap pe-in">
+    <div class="pe-texte revele">
+      <div class="pe-marque"><span class="pe-logo"><img src="${esc(E.logo)}" alt="Providence Éditions Prestige" width="300" height="229" loading="lazy"></span>
+        <div><small>La maison d'édition</small><b>Providence Éditions Prestige</b><span class="pe-devise">${esc(E.devise)}</span></div></div>
+      <p class="pe-sur">${esc(A.accroche)}</p>
+      <h2 id="pe-titre">${esc(t1)}${t2 ? ` <span class="b">${esc(t2)}</span>` : ""}</h2>
+      <p class="pe-intro">Correction, mise en page, couverture et préparation technique : Providence Éditions Prestige accompagne les auteurs jusqu'au livre achevé.</p>
+      <ul class="pe-services">${A.services.map((x, i) => `<li><span class="pe-ico">${icones[i] || IC.plume}</span>${esc(x)}</li>`).join("")}</ul>
+      <div class="pe-promesse"><b>${esc(A.promesse)}</b><span>${esc(A.promesseTexte)}</span></div>
+      <div class="pe-actions"><a class="btn btn-principal btn-eclat" target="_blank" rel="noopener" data-sortie="manuscrit" href="${esc(wa(CFG.vente.whatsappCommandes, "Bonjour Providence Éditions Prestige, je souhaite vous confier mon manuscrit."))}">${esc(A.appel)}</a><a class="btn btn-capsule" href="#editeur">Découvrir la maison</a></div>
+      <ul class="pe-coord">${coord.map(c => `<li>${c.lien ? `<a href="${esc(c.lien)}" ${c.type === "email" ? "" : 'target="_blank" rel="noopener"'} data-sortie="${c.type}">` : "<span>"}<span class="pico ${c.type}">${IC[c.type] || ""}</span>${esc(c.txt)}${c.lien ? "</a>" : "</span>"}</li>`).join("")}</ul>
+    </div>
+    <div class="pe-visuels revele">${(A.visuels || []).map((v, i) => `<button type="button" class="aff aff-${i + 1}" data-agrandir="${esc(v)}" aria-label="Agrandir l'annonce ${i + 1} de Providence Éditions Prestige"><img src="${esc(v)}" alt="Annonce de Providence Éditions Prestige : ${esc(i ? A.accroche : A.titre)}" width="760" height="${i ? 760 : 950}" loading="lazy"></button>`).join("")}</div>
+  </div>`;
+}
+
+/* ---------- Métadonnées par page ---------- */
+function meta(titre, desc, image) {
+  document.title = titre;
+  $("#meta-desc").setAttribute("content", desc);
+  $("#og-titre").setAttribute("content", titre);
+  $("#og-desc").setAttribute("content", desc);
+  $("#og-image").setAttribute("content", image || "couvertures/01-vase-d-or.jpg");
+  const base = CFG.vente.urlCanonique;
+  let can = $('link[rel="canonical"]');
+  if (base) { if (!can) { can = document.createElement("link"); can.rel = "canonical"; document.head.appendChild(can); } can.href = base + location.hash; }
+}
+function donneesStructurees(l) {
+  let s = $("#ld"); if (s) s.remove();
+  if (!l) return;
+  s = document.createElement("script"); s.type = "application/ld+json"; s.id = "ld";
+  const d = { "@context": "https://schema.org", "@type": "Book", name: l.titre, author: l.auteurs.map(n => ({ "@type": "Person", name: n })), publisher: { "@type": "Organization", name: "Providence Éditions Prestige" }, bookFormat: "https://schema.org/EBook", inLanguage: "fr", image: l.couverture };
+  if (l.pages) d.numberOfPages = l.pages;
+  if (l.isbn) d.isbn = l.isbn;
+  if (l.prix) d.offers = { "@type": "Offer", price: l.prix, priceCurrency: CFG.vente.devise || "XOF" };
+  s.textContent = JSON.stringify(d); document.head.appendChild(s);
+}
+
+/* ---------- Routeur ---------- */
+const BASE_TITRE = "Les livres du Docteur B. Silas Gbavou — Providence Éditions Prestige";
+function router() {
+  const h = (location.hash || "#accueil").slice(1);
+  let html, nav = h, livre = null;
+  if (h.startsWith("livre-")) { livre = LIVRES.find(x => x.slug === h.slice(6)); nav = "catalogue"; html = livre ? pageLivre(livre) : pageCatalogue(); }
+  else if (h === "parcours") { html = pageAccueil(); nav = "accueil"; }
+  else html = ({ catalogue: pageCatalogue, commande: pageCommande, auteur: pageAuteur, aide: pageAide, videos: pageVideos, confirmation: pageCommande, contact: pageContact, editeur: pageEditeur, conditions: pageConditions, livraison: pageLivraison, confidentialite: pageConfidentialite }[h] || pageAccueil)();
+  if (nav === "confirmation") nav = "commande";
+  if (!["accueil","catalogue","commande","auteur","aide","videos","editeur","contact"].includes(nav)) nav = ["conditions","livraison","confidentialite"].includes(nav) ? "aide" : "accueil";
+  vue.innerHTML = html;
+  $$("[data-nav]").forEach(a => { const on = a.dataset.nav === nav; a.classList.toggle("actif", on); on ? a.setAttribute("aria-current", "page") : a.removeAttribute("aria-current"); });
+  if (livre) { meta(livre.titre + " — Docteur B. Silas Gbavou", (livre.description[0] || "").slice(0, 160), livre.couverture); donneesStructurees(livre); mesure("vue_livre", { livre: livre.id }); }
+  else { meta(BASE_TITRE, "La librairie du Docteur B. Silas Gbavou : ouvrages doctrinaux et prophétiques en PDF, édités par Providence Éditions Prestige (Bénin)."); donneesStructurees(null); }
+  if (h === "commande" && articles().length) mesure("debut_commande", { nb: nbArticles() });
+  if (h === "parcours") { const p = $("#parcours"); p && p.scrollIntoView(); }
+  else window.scrollTo({ top: 0, behavior: "instant" });
+  if (router.fait) { const t = $("h1", vue); if (t) { t.setAttribute("tabindex", "-1"); t.focus({ preventScroll: true }); } }
+  else if (!reduit.matches) { document.documentElement.classList.add("entree"); setTimeout(() => document.documentElement.classList.remove("entree"), 1400); }
+  router.fait = true;
+  observer();
+}
+let io = null;
+function observer() {
+  if (!("IntersectionObserver" in window) || reduit.matches) return;
+  document.documentElement.classList.add("anim");
+  io && io.disconnect();
+  io = new IntersectionObserver(es => es.forEach(e => { if (e.isIntersecting) { e.target.classList.add("vu"); io.unobserve(e.target); } }), { rootMargin: "0px 0px -8% 0px" });
+  $$(".revele:not(.vu)").forEach(el => io.observe(el));
+}
+
+/* ---------- Ouverture discrète des pages de paiement ---------- */
+function ouvrir(url, canal) {
+  if (!/^https:\/\//.test(url || "")) return false;
+  const a = document.createElement("a"); a.href = url; a.target = "_blank"; a.rel = "noopener noreferrer";
+  document.body.appendChild(a); a.click(); a.remove();
+  mesure("sortie", { canal: canal || "paiement" });
+  return true;
+}
+function enLigneActif() { const p = CFG.vente.paiementEnLigne || {}; return p.actif && p.verifie; }
+function procurer(id) {
+  if (id === "collection") {
+    if (enLigneActif() && CFG.vente.lienCollection && ouvrir(CFG.vente.lienCollection, "paiement-collection")) { toast("Ouverture de la page de paiement sécurisée"); return; }
+    choisirCollection(); location.hash === "#commande" ? router() : (location.hash = "commande"); return;
+  }
+  const l = LIVRES.find(x => x.id === id); if (!l) return;
+  if (enLigneActif() && ouvrir(l.lienPaiement, "paiement-livre")) { mesure("debut_achat", { livre: id }); toast("Ouverture de la page de paiement sécurisée"); return; }
+  if (ajouter(id)) location.hash = "commande";
+}
+
+/* ---------- Actions ---------- */
+document.addEventListener("click", e => {
+  const s = e.target.closest("[data-sortie]");
+  if (s) mesure("sortie", { canal: s.dataset.sortie });
+  const ev = e.target.closest("[data-evitement]");
+  if (ev) { e.preventDefault(); vue.focus(); return; }
+  const df = e.target.closest("[data-defile]");
+  if (df) { e.preventDefault(); const c = document.getElementById(df.dataset.defile); if (c) { c.scrollIntoView({ behavior: reduit.matches ? "auto" : "smooth" }); const h = $("h2", c); if (h) { h.setAttribute("tabindex", "-1"); h.focus({ preventScroll: true }); } } return; }
+  if (e.target.closest("[data-haut]")) { window.scrollTo({ top: 0, behavior: reduit.matches ? "auto" : "smooth" }); return; }
+  const pr = e.target.closest("[data-procurer]");
+  if (pr) { procurer(pr.dataset.procurer); return; }
+  const dv = e.target.closest("button[data-devise]");
+  if (dv) { choisirDevise(dv.dataset.devise); return; }
+  const ag = e.target.closest("[data-agrandir]");
+  if (ag) { const d = $("#visionneuse"); $("img", d).src = ag.dataset.agrandir; $("img", d).alt = $("img", ag).alt; try { d.showModal(); } catch (err) { d.setAttribute("open", ""); } return; }
+  if (e.target.closest("[data-fermer]") || e.target.id === "visionneuse") { const d = $("#visionneuse"); try { d.close(); } catch (err) { d.removeAttribute("open"); } return; }
+  const rv = e.target.closest("[data-revoir]");
+  if (rv) { const c = rv.closest(".video-cadre"), v = c && $("video", c); if (v) { c.classList.remove("fini"); v.currentTime = 0; v.play().catch(() => {}); } return; }
+  const rg = e.target.closest("[data-regler]");
+  if (rg) {
+    const L = liensPaiement(), x = L && L[+rg.dataset.regler];
+    if (x && ouvrir(x.lien, "paiement-commande")) {
+      mesure("debut_achat", { livre: x.id });
+      const ligne = rg.closest(".paiement-livre"), st = ligne && $(".statut-ligne", ligne);
+      if (ligne) ligne.classList.add("ouvert");
+      if (st) st.textContent = "Page de paiement ouverte";
+      rg.childNodes[0].nodeValue = "Rouvrir";
+      toast("Ouverture de la page de paiement sécurisée");
+    }
+    return;
+  }
+  const t = e.target.closest("[data-acheter],[data-ajouter],[data-collection],[data-retirer],[data-vider],[data-filtre],[data-reinit],[data-annuler],[data-effacer]");
+  if (!t) return;
+  if (t.dataset.filtre !== undefined) {
+    filtre = t.dataset.filtre;
+    $$(".filtre").forEach(b => b.setAttribute("aria-pressed", b.dataset.filtre === filtre));
+    $("#grille").innerHTML = grilleCatalogue(); $("#resultat").textContent = texteResultat(); return;
+  }
+  if (t.hasAttribute("data-reinit")) { filtre = "Tous"; recherche = ""; router(); return; }
+  if (t.dataset.acheter) { if (ajouter(t.dataset.acheter)) location.hash = "commande"; return; }
+  if (t.dataset.ajouter) { ajouter(t.dataset.ajouter); return; }
+  if (t.hasAttribute("data-collection")) { choisirCollection(); location.hash === "#commande" ? router() : (location.hash = "commande"); return; }
+  if (t.dataset.retirer) { panier.ids = panier.ids.filter(i => i !== t.dataset.retirer); sauver(); toast("Livre retiré"); router(); return; }
+  if (t.hasAttribute("data-vider")) { panier = { ids: [], collection: false }; sauver(); toast("Collection retirée"); router(); return; }
+  if (t.dataset.annuler) { try { const p = JSON.parse(t.dataset.annuler); panier = { ids: (p.ids || []).filter(id => LIVRES.some(l => l.id === id)), collection: !!p.collection }; sauver(); toast("Changement annulé"); router(); } catch (err) {} return; }
+  if (t.hasAttribute("data-effacer")) {
+    ["pep-panier", "pep-devise", "pep-taux"].forEach(k => stock.ecrire("localStorage", k, null));
+    devise = "XOF"; taux = null; majDevise(false);
+    ["pep-brouillon", "pep-derniere", "pep-avis"].forEach(k => stock.ecrire("sessionStorage", k, null));
+    panier = { ids: [], collection: false }; majCompteur(); toast("Données effacées de cet appareil"); return;
+  }
+});
+document.addEventListener("input", e => {
+  if (e.target.id === "q") { recherche = e.target.value; $("#grille").innerHTML = grilleCatalogue(); $("#resultat").textContent = texteResultat(); }
+});
+/* Le dock se retire pendant la saisie (clavier ouvert) pour ne pas masquer les champs */
+document.addEventListener("focusin", e => { if (e.target.matches("input,select,textarea")) $(".barre-mobile").classList.add("masque"); });
+document.addEventListener("focusout", e => { if (e.target.matches("input,select,textarea")) setTimeout(() => { if (!document.activeElement.matches("input,select,textarea")) $(".barre-mobile").classList.remove("masque"); }, 60); });
+window.addEventListener("hashchange", router);
+document.addEventListener("ended", e => { if (e.target.tagName === "VIDEO") { const c = e.target.closest(".video-cadre"); if (c) { c.classList.add("fini"); try { if (document.fullscreenElement) document.exitFullscreen(); } catch (er) {} } const v = (CFG.vente.videos || []).find(x => e.target.src.endsWith(x.fichier)); mesure("video_terminee", { livre: v && v.livre }); } }, true);
+document.addEventListener("play", e => { if (e.target.tagName === "VIDEO") { $$("video").forEach(v => { if (v !== e.target) v.pause(); }); const c = e.target.closest(".video-cadre"); if (c) c.classList.remove("fini"); } }, true);
+const entete = document.getElementById("entete");
+const surDefilement = () => entete && entete.classList.toggle("defile", scrollY > 24);
+window.addEventListener("scroll", surDefilement, { passive: true }); surDefilement();
+
+/* ---------- Chargement ---------- */
+vue.innerHTML = `<p class="chargement">Chargement de la bibliothèque…</p>`;
+Promise.all([fetch("data/livres.json").then(r => r.json()), fetch("data/config.json").then(r => r.json())])
+  .then(([l, c]) => {
+    TOUS = l; LIVRES = l.filter(x => x.disponible !== false); CFG = c;
+    THEMES = [...new Set(LIVRES.map(x => x.theme))];
+    if ((CFG.vente.videos || []).some(v => v.fichier)) document.getElementById("nav-videos").hidden = false;
+    $("#pied-contacts").innerHTML = CFG.contacts.map(x => `<a href="${esc(x.lien)}" ${x.type === "email" ? "" : 'target="_blank" rel="noopener"'} data-sortie="${x.type}"><span class="pico ${x.type}">${IC[x.type] || ""}</span><span><small>${esc(x.label)}</small>${esc(x.type === "facebook" ? "Page Facebook" : x.valeur)}</span></a>`).join("");
+    const pe = document.getElementById("pied-editeur"); if (pe) pe.innerHTML = piedEditeur();
+    nettoyer(); majCompteur(); router();
+    majDevise(false); if (devise === "USD") actualiserTaux();
+  })
+  .catch(() => { vue.innerHTML = `<p class="chargement">La bibliothèque n'a pas pu se charger. Rechargez la page.</p>`; });
+})();
