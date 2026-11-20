@@ -323,10 +323,6 @@
    "totalReference": 83500,
    "arrondi": 500,
    "note": "Prix de l'ensemble des collections. Si le total des prix séparés change (nouveau livre, nouveau prix), le prix d'ensemble suit la même proportion (65 000 / 83 500), puis se répartit entre les collections au prorata. Un livre absent des listes rejoint la dernière collection."
-  },
-  "notification": {
-   "email": "silasgbavou@gmail.com",
-   "service": "https://formsubmit.co/ajax/"
   }
  },
  "contacts": [

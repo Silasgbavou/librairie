@@ -642,8 +642,7 @@ function pageConfidentialite() {
     <h2>Sur votre appareil</h2>
     <ul>
       <li>La liste des livres de votre sélection et la devise d'affichage choisie restent dans votre navigateur.</li>
-      <li>Le site n'a pas de base de données : il ne reçoit ni votre nom ni votre numéro.</li>
-      <li>Avant le paiement, vous pouvez donner votre adresse e-mail. C'est facultatif. Elle est alors transmise à la maison d'édition, uniquement pour vous écrire au sujet de votre commande, et gardée dans votre navigateur pour vous éviter de la retaper.</li>
+      <li>Le site n'a pas de base de données : il ne reçoit ni votre nom, ni votre numéro, ni votre e-mail.</li>
     </ul>
     <h2>Quand vous réglez</h2>
     <p>Le règlement s'effectue sur notre page de paiement sécurisée, qui traite seule vos données de paiement : ce site n'en reçoit aucune. Si vous écrivez sur WhatsApp, vous envoyez vous-même votre message.</p>
@@ -824,8 +823,8 @@ function enLigneActif() { const p = CFG.vente.paiementEnLigne || {}; return p.ac
 function procurer(id) {
   const lot = (CFG.vente.lots || []).find(L => L.id === id);
   if (lot) {
+    if (enLigneActif() && lot.lien && ouvrir(lot.lien, "paiement-" + lot.id)) { toast("Ouverture de la page de paiement sécurisée"); return; }
     const lc = lotsCalcules().lots.find(L => L.id === id);
-    if (enLigneActif() && /^https:\/\//.test(lot.lien || "")) { passage({ nom: lot.nom + (lc ? ` (${lc.livres.length} ouvrages)` : ""), prix: lc ? lc.prix : 0, image: lc && lc.livres[0] ? mini(lc.livres[0]) : "", lien: lot.lien, canal: "paiement-" + lot.id }); return; }
     ouvrir(lienAssistance(`je souhaite acquérir ${lot.nom} (${lc ? lc.livres.length : lot.ids.length} ouvrages).`), "assistance-" + lot.id); return;
   }
   if (id === "collection") {
@@ -833,41 +832,9 @@ function procurer(id) {
     choisirCollection(); location.hash === "#commande" ? router() : (location.hash = "commande"); return;
   }
   const l = LIVRES.find(x => x.id === id); if (!l) return;
-  if (enLigneActif() && /^https:\/\//.test(l.lienPaiement || "")) { passage({ nom: l.titre, prix: l.prix, image: mini(l), lien: l.lienPaiement, canal: "paiement-livre", livre: id }); return; }
+  if (enLigneActif() && ouvrir(l.lienPaiement, "paiement-livre")) { mesure("debut_achat", { livre: id }); toast("Ouverture de la page de paiement sécurisée"); return; }
   if (ajouter(id)) location.hash = "commande";
 }
-
-/* ---------- Passage vers le paiement : e-mail facultatif ---------- */
-let enCours = null;
-function passage(o) {
-  const d = $("#passage"); enCours = o;
-  $(".passage-article img", d).src = o.image || ""; $(".passage-article img", d).hidden = !o.image;
-  $(".passage-article b", d).textContent = o.nom;
-  $(".passage-article span", d).innerHTML = o.prix ? px(o.prix) : "";
-  const champ = $("#passage-email"); champ.value = stock.lire("localStorage", "pep-email") || "";
-  $(".passage-erreur", d).hidden = true; champ.removeAttribute("aria-invalid");
-  try { d.showModal(); } catch (err) { d.setAttribute("open", ""); }
-}
-function fermerPassage() { const d = $("#passage"); try { d.close(); } catch (err) { d.removeAttribute("open"); } }
-function signaler(o, email) {
-  const N = CFG.vente.notification || {}; if (!N.email || !email) return;
-  const corps = { _subject: "Passage vers le paiement : " + o.nom, _template: "table", _captcha: "false",
-    "Ouvrage": o.nom, "Montant": o.prix ? o.prix.toLocaleString("fr-FR") + " FCFA" : "", "E-mail du lecteur": email,
-    "Date": new Date().toLocaleString("fr-FR"), "Page": location.href, _replyto: email };
-  try { fetch(N.service + N.email, { method: "POST", keepalive: true, headers: { "Content-Type": "application/json", Accept: "application/json" }, body: JSON.stringify(corps) }).catch(() => {}); } catch (err) {}
-}
-function validerPassage() {
-  const o = enCours; if (!o) return;
-  const champ = $("#passage-email"), v = champ.value.trim();
-  if (v && !/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(v)) { $("#passage .passage-erreur").hidden = false; champ.setAttribute("aria-invalid", "true"); champ.focus(); return; }
-  if (v) stock.ecrire("localStorage", "pep-email", v);
-  if (ouvrir(o.lien, o.canal)) { if (o.livre) mesure("debut_achat", { livre: o.livre }); signaler(o, v); toast("Ouverture de la page de paiement sécurisée"); }
-  fermerPassage();
-}
-
-/* Entrée dans le champ e-mail = continuer */
-document.querySelector("#passage form")?.addEventListener("submit", e => { e.preventDefault(); validerPassage(); });
-document.getElementById("passage-email")?.addEventListener("keydown", e => { if (e.key === "Enter") { e.preventDefault(); validerPassage(); } });
 
 /* ---------- Actions ---------- */
 document.addEventListener("click", e => {
@@ -903,8 +870,6 @@ document.addEventListener("click", e => {
     const v = $("video", d); if (v) { v.preload = "auto"; v.play().catch(() => {}); }
     mesure("video_ouverte", { livre: x.livre }); return;
   }
-  if (e.target.closest("[data-passage-go]")) { validerPassage(); return; }
-  if (e.target.closest("[data-fermer-passage]") || e.target.id === "passage") { fermerPassage(); return; }
   if (e.target.closest("[data-fermer-lecteur]") || e.target.id === "lecteur") { const d = $("#lecteur"); const v = $("video", d); if (v) v.pause(); try { d.close(); } catch (err) { d.removeAttribute("open"); } return; }
   const rv = e.target.closest("[data-revoir]");
   if (rv) { const c = rv.closest(".video-cadre"), v = c && $("video", c); if (v) { c.classList.remove("fini"); v.currentTime = 0; v.play().catch(() => {}); } return; }
@@ -936,7 +901,7 @@ document.addEventListener("click", e => {
   if (t.hasAttribute("data-vider")) { panier = { ids: [], collection: false }; sauver(); toast("Collection retirée"); router(); return; }
   if (t.dataset.annuler) { try { const p = JSON.parse(t.dataset.annuler); panier = { ids: (p.ids || []).filter(id => LIVRES.some(l => l.id === id)), collection: !!p.collection }; sauver(); toast("Changement annulé"); router(); } catch (err) {} return; }
   if (t.hasAttribute("data-effacer")) {
-    ["pep-panier", "pep-devise", "pep-taux", "pep-email"].forEach(k => stock.ecrire("localStorage", k, null));
+    ["pep-panier", "pep-devise", "pep-taux"].forEach(k => stock.ecrire("localStorage", k, null));
     devise = "XOF"; taux = null; majDevise(false);
     ["pep-brouillon", "pep-derniere", "pep-avis"].forEach(k => stock.ecrire("sessionStorage", k, null));
     panier = { ids: [], collection: false }; majCompteur(); toast("Données effacées de cet appareil"); return;
@@ -957,7 +922,7 @@ window.addEventListener("scroll", surDefilement, { passive: true }); surDefileme
 
 /* ---------- Chargement ---------- */
 vue.innerHTML = `<p class="chargement">Chargement de la bibliothèque…</p>`;
-Promise.all([fetch("data/livres.json?v=20261120q").then(r => r.json()), fetch("data/config.json?v=20261120q").then(r => r.json())])
+Promise.all([fetch("data/livres.json?v=20261120r").then(r => r.json()), fetch("data/config.json?v=20261120r").then(r => r.json())])
   .then(([l, c]) => {
     TOUS = l; LIVRES = l.filter(x => x.disponible !== false); CFG = c;
     THEMES = [...new Set(LIVRES.map(x => x.theme))];
