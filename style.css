@@ -734,3 +734,11 @@ del .px-ref{display:none}
 .haut-page:hover{transform:translateY(-2px);box-shadow:0 1px 0 #fff inset,0 18px 32px -14px rgba(18,56,168,.6)}
 .haut-page:hover .hp-fleche{transform:translateY(-3px)}
 .haut-page:focus-visible{outline:3px solid #F3C623;outline-offset:3px}
+/* Accueil : texte éditorial */
+.hero h1{overflow-wrap:break-word}
+.hero-lead{font-size:clamp(17px,2vw,20px);font-weight:700;color:var(--texte);line-height:1.45;margin:0;max-width:600px}
+.hero-texte{max-width:600px;margin:14px 0 22px;padding-left:16px;border-left:3px solid rgba(24,80,208,.22)}
+.hero-texte p{font-size:clamp(15px,1.5vw,16.5px);line-height:1.68;color:var(--texte-2);margin:0 0 12px}
+.hero-texte p:last-child{margin-bottom:0}
+.hero-texte .hero-acces{color:var(--action);font-weight:700}
+.hero .atouts{margin-bottom:24px}

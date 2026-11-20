@@ -382,12 +382,17 @@ function pageAccueil() {
   return `
   <section class="hero"><div class="wrap hero-grille">
     <div>
-      <span class="pastille-info" data-enter><i></i>Librairie numérique · Providence Éditions Prestige</span>
-      <h1 data-enter="2" tabindex="-1">La librairie du <span class="b">Docteur B. Silas Gbavou</span></h1>
-      <p class="chapeau" data-enter="3">Ici sont réunis ses ouvrages d'enseignement biblique : le Royaume et la rédemption, la vie prophétique et l'œuvre du Saint-Esprit, l'Église et les ministères, la prière. <span style="white-space:nowrap">Plus de ${pages} pages</span> d'enseignement biblique. Choisissez un livre, réglez-le en ligne et recevez aussitôt le PDF, à lire sur votre téléphone, votre tablette ou votre ordinateur.</p>
-      <ul class="atouts" data-enter="3"><li>Enseignement biblique structuré</li><li>Remise immédiate du PDF</li><li>Paiement sécurisé : Mobile Money ou carte</li></ul>
+      <span class="pastille-info" data-enter><i></i>Librairie numérique • Providence Éditions Prestige</span>
+      <h1 data-enter="2" tabindex="-1">Une librairie de référence pour <span class="b">approfondir les Écritures</span></h1>
+      <p class="hero-lead" data-enter="3">Explorez l'univers littéraire et doctrinal du <span style="white-space:nowrap">Docteur B. Silas Gbavou</span>.</p>
+      <div class="hero-texte" data-enter="3">
+        <p>Découvrez une collection d'ouvrages consacrés à l'intelligence des Saintes Écritures, à la profondeur des mystères bibliques et à l'édification spirituelle.</p>
+        <p>À travers des enseignements spirituels et prophétiques structurés, des études doctrinales approfondies et une approche rigoureuse de la Parole de Dieu, chaque ouvrage vous invite à progresser dans la connaissance des vérités de la Parole de Dieu.</p>
+        <p class="hero-acces">Accédez à nos ouvrages numériques en quelques instants, où que vous soyez dans le monde.</p>
+      </div>
+      <ul class="atouts" data-enter="3"><li>Ouvrages numériques accessibles immédiatement en PDF</li><li>Paiement sécurisé par Mobile Money ou carte bancaire</li></ul>
       <div class="actions" data-enter="4">
-        <a class="btn btn-principal btn-eclat" href="#tous-les-ouvrages" data-defile="tous-les-ouvrages">Découvrir les ouvrages</a>
+        <a class="btn btn-principal btn-eclat" href="#tous-les-ouvrages" data-defile="tous-les-ouvrages">Découvrir la collection</a>
         <a class="btn btn-capsule" href="#parcours" data-defile="parcours">Comment acquérir un livre</a>
       </div>
       <figure class="mot-bienvenue" data-enter="4">
@@ -917,7 +922,7 @@ window.addEventListener("scroll", surDefilement, { passive: true }); surDefileme
 
 /* ---------- Chargement ---------- */
 vue.innerHTML = `<p class="chargement">Chargement de la bibliothèque…</p>`;
-Promise.all([fetch("data/livres.json?v=20261120l").then(r => r.json()), fetch("data/config.json?v=20261120l").then(r => r.json())])
+Promise.all([fetch("data/livres.json?v=20261120n").then(r => r.json()), fetch("data/config.json?v=20261120n").then(r => r.json())])
   .then(([l, c]) => {
     TOUS = l; LIVRES = l.filter(x => x.disponible !== false); CFG = c;
     THEMES = [...new Set(LIVRES.map(x => x.theme))];
