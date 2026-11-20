@@ -708,3 +708,29 @@ del .px-ref{display:none}
 .collection .offre-ensemble .oe-prix>.px{color:var(--action)}
 .lot-prix-bloc{text-align:left}
 .lot-tete{flex-direction:column;align-items:flex-start;gap:6px}
+/* Partage premium */
+.btn-reseau{display:inline-flex;align-items:center;gap:12px;padding:8px 18px 8px 8px;min-height:54px;border-radius:16px;background:#fff;border:1px solid var(--filet);box-shadow:var(--ombre);color:var(--texte);font-weight:800;font-size:15px;line-height:1.15;text-decoration:none;transition:transform var(--t-moyen) var(--ease),box-shadow var(--t-moyen) var(--ease),border-color var(--t-moyen)}
+.btn-reseau small{display:block;font-size:11.5px;font-weight:600;color:var(--texte-2);letter-spacing:.02em}
+.btn-reseau .pico svg{width:20px;height:20px}
+.btn-reseau.wa:hover{border-color:#1EBE5D}.btn-reseau.fb:hover{border-color:#1877F2}
+.btn-reseau:hover{transform:translateY(-2px);box-shadow:0 16px 30px -14px rgba(18,36,58,.4)}
+.btn-reseau:hover>.pico{transform:scale(1.06)}
+/* Mot de bienvenue */
+.mot-bienvenue{margin:28px 0 0;max-width:540px;background:#fff;border:1px solid var(--filet);border-radius:22px;padding:20px 22px 16px;box-shadow:var(--ombre);position:relative;border-left:5px solid var(--action)}
+.mb-sur{display:inline-block;font-size:11.5px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--action);background:var(--fond);padding:5px 10px;border-radius:999px}
+.mot-bienvenue blockquote{margin:12px 0 14px;font-size:15.5px;line-height:1.6;color:var(--texte);font-style:italic}
+.mot-bienvenue blockquote::before{content:"« "}.mot-bienvenue blockquote::after{content:" »"}
+.mot-bienvenue figcaption{display:flex;align-items:center;gap:12px;padding-top:12px;border-top:1px solid var(--filet)}
+.mot-bienvenue figcaption img{width:48px;height:48px;border-radius:14px;object-fit:cover;object-position:top;flex:none}
+.mot-bienvenue figcaption span{font-size:13px;color:var(--texte-2);line-height:1.4}
+.mot-bienvenue figcaption b{display:block;color:var(--texte);font-size:15px}
+/* Haut de page premium */
+.haut-page{--prog:0;display:inline-flex;align-items:center;gap:10px;padding:6px 18px 6px 6px;min-height:52px;border-radius:999px;border:1px solid rgba(24,80,208,.18);background:linear-gradient(180deg,#fff,#EEF4FF);box-shadow:0 1px 0 #fff inset,0 12px 26px -14px rgba(18,56,168,.55);color:var(--texte);font-weight:800;font-size:14px;letter-spacing:.01em;cursor:pointer;transition:transform var(--t-moyen) var(--ease),box-shadow var(--t-moyen) var(--ease)}
+.hp-anneau{position:relative;width:40px;height:40px;display:grid;place-items:center;border-radius:50%;background:linear-gradient(150deg,#3D7BFF,#1238A8);color:#fff;box-shadow:0 6px 14px -4px rgba(18,56,168,.6)}
+.hp-anneau svg:first-child{position:absolute;inset:0;width:40px;height:40px;transform:rotate(-90deg)}
+.hp-fond{fill:none;stroke:rgba(255,255,255,.22);stroke-width:2.5}
+.hp-prog{fill:none;stroke:#F3C623;stroke-width:2.5;stroke-linecap:round;stroke-dasharray:100;stroke-dashoffset:calc(100 - var(--prog) * 100);transition:stroke-dashoffset .15s linear}
+.hp-fleche{width:18px;height:18px;position:relative;transition:transform var(--t-moyen) var(--ease)}
+.haut-page:hover{transform:translateY(-2px);box-shadow:0 1px 0 #fff inset,0 18px 32px -14px rgba(18,56,168,.6)}
+.haut-page:hover .hp-fleche{transform:translateY(-3px)}
+.haut-page:focus-visible{outline:3px solid #F3C623;outline-offset:3px}

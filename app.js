@@ -384,13 +384,17 @@ function pageAccueil() {
     <div>
       <span class="pastille-info" data-enter><i></i>Librairie numérique · Providence Éditions Prestige</span>
       <h1 data-enter="2" tabindex="-1">La librairie du <span class="b">Docteur B. Silas Gbavou</span></h1>
-      <p class="chapeau" data-enter="3">Des ouvrages doctrinaux et prophétiques pour comprendre les mystères de la Parole, bâtir une vie de prière solide et servir Dieu avec onction. Plus de ${pages} pages d'enseignement structuré, à lire dès aujourd'hui sur votre téléphone, votre tablette ou votre ordinateur.</p>
+      <p class="chapeau" data-enter="3">Ici sont réunis ses ouvrages d'enseignement biblique : le Royaume et la rédemption, la vie prophétique et l'œuvre du Saint-Esprit, l'Église et les ministères, la prière. <span style="white-space:nowrap">Plus de ${pages} pages</span> d'enseignement biblique. Choisissez un livre, réglez-le en ligne et recevez aussitôt le PDF, à lire sur votre téléphone, votre tablette ou votre ordinateur.</p>
       <ul class="atouts" data-enter="3"><li>Enseignement biblique structuré</li><li>Remise immédiate du PDF</li><li>Paiement sécurisé : Mobile Money ou carte</li></ul>
       <div class="actions" data-enter="4">
         <a class="btn btn-principal btn-eclat" href="#tous-les-ouvrages" data-defile="tous-les-ouvrages">Découvrir les ouvrages</a>
         <a class="btn btn-capsule" href="#parcours" data-defile="parcours">Comment acquérir un livre</a>
       </div>
-      <div class="carte-auteur" data-enter="4"><img src="${esc(A.photoBuste)}" alt="" width="54" height="54"><span><b>Docteur B. Silas Gbavou</b>Enseignant de la Parole de Dieu et scribe prophétique</span></div>
+      <figure class="mot-bienvenue" data-enter="4">
+        <span class="mb-sur">Mot de bienvenue</span>
+        <blockquote>Bien-aimé, soyez le bienvenu. Ces livres sont nés de l'étude de la Parole et de la prière. Je vous les remets pour que vous grandissiez dans la connaissance de Dieu et que vous serviez avec intelligence. Prenez le temps de parcourir la librairie et choisissez l'ouvrage qui répond à votre besoin.</blockquote>
+        <figcaption><img src="${esc(A.photoBuste)}" alt="" width="54" height="54"><span><b>Docteur B. Silas Gbavou</b>Enseignant de la Parole de Dieu et scribe prophétique</span></figcaption>
+      </figure>
     </div>
     <div class="vitrine" aria-hidden="true" data-enter="3"><div class="halo"></div>${pile.map(l => livre3d(l, true)).join("")}<span class="etiquette">Providence Éditions Prestige</span></div>
   </div>${vagues}</section>
@@ -517,8 +521,8 @@ function pageLivre(l) {
           <p class="precision">${l.sommaireType === "extraits" ? "Aperçu de quelques chapitres : ce n'est pas le sommaire complet du livre." : "Aperçu tiré du livre. Le sommaire détaillé figure dans le PDF."}</p></div>` : ""}
         ${l.citation ? `<div class="bloc"><blockquote class="citation">${esc(l.citation)}<small>${esc(l.titre)}${l.citation_page ? ", page " + l.citation_page + " du PDF" : ""}</small></blockquote></div>` : ""}
         <div class="bloc"><h2>Partager ce livre</h2><div class="partage">
-          <a class="btn btn-wa btn-petit" target="_blank" rel="noopener" data-sortie="partage" href="https://wa.me/?text=${encodeURIComponent(l.titre + " — " + auteursTxt(l) + "\n" + urlLivre)}">${IC.wa}WhatsApp</a>
-          <a class="btn btn-capsule btn-petit" target="_blank" rel="noopener" data-sortie="partage" href="https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(urlLivre)}">Facebook</a>
+          <a class="btn-reseau wa" target="_blank" rel="noopener" data-sortie="partage" href="https://wa.me/?text=${encodeURIComponent(l.titre + " — " + auteursTxt(l) + "\n" + urlLivre)}"><span class="pico whatsapp">${IC.wa}</span><span><small>Partager sur</small>WhatsApp</span></a>
+          <a class="btn-reseau fb" target="_blank" rel="noopener" data-sortie="partage" href="https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(urlLivre)}"><span class="pico facebook">${IC.facebook}</span><span><small>Partager sur</small>Facebook</span></a>
         </div></div>
         <div class="bloc"><h2>Vous aimerez aussi</h2><div class="reco">
           ${autres.map(x => `<a href="#livre-${x.slug}"><img src="${mini(x)}" alt="" loading="lazy" width="420" height="595"><span>${esc(x.titre)}</span></a>`).join("")}
@@ -913,7 +917,7 @@ window.addEventListener("scroll", surDefilement, { passive: true }); surDefileme
 
 /* ---------- Chargement ---------- */
 vue.innerHTML = `<p class="chargement">Chargement de la bibliothèque…</p>`;
-Promise.all([fetch("data/livres.json?v=20261120j").then(r => r.json()), fetch("data/config.json?v=20261120j").then(r => r.json())])
+Promise.all([fetch("data/livres.json?v=20261120l").then(r => r.json()), fetch("data/config.json?v=20261120l").then(r => r.json())])
   .then(([l, c]) => {
     TOUS = l; LIVRES = l.filter(x => x.disponible !== false); CFG = c;
     THEMES = [...new Set(LIVRES.map(x => x.theme))];
@@ -924,4 +928,13 @@ Promise.all([fetch("data/livres.json?v=20261120j").then(r => r.json()), fetch("d
     majDevise(false); if (devise === "USD") actualiserTaux();
   })
   .catch(() => { vue.innerHTML = `<p class="chargement">La bibliothèque n'a pas pu se charger. Rechargez la page.</p>`; });
+})();
+
+/* Haut de page : anneau de progression de lecture */
+(() => {
+  const b = document.querySelector("[data-haut]"); if (!b) return;
+  let f = 0;
+  const maj = () => { f = 0; const h = document.documentElement, max = h.scrollHeight - innerHeight; b.style.setProperty("--prog", max > 0 ? Math.min(1, scrollY / max) : 0); };
+  addEventListener("scroll", () => { if (!f) f = requestAnimationFrame(maj); }, { passive: true });
+  addEventListener("resize", maj); maj();
 })();
