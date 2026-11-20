@@ -913,7 +913,7 @@ window.addEventListener("scroll", surDefilement, { passive: true }); surDefileme
 
 /* ---------- Chargement ---------- */
 vue.innerHTML = `<p class="chargement">Chargement de la bibliothèque…</p>`;
-Promise.all([fetch("data/livres.json?v=20261120i").then(r => r.json()), fetch("data/config.json?v=20261120i").then(r => r.json())])
+Promise.all([fetch("data/livres.json?v=20261120j").then(r => r.json()), fetch("data/config.json?v=20261120j").then(r => r.json())])
   .then(([l, c]) => {
     TOUS = l; LIVRES = l.filter(x => x.disponible !== false); CFG = c;
     THEMES = [...new Set(LIVRES.map(x => x.theme))];
