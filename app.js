@@ -493,7 +493,7 @@ const VIDES_IDX = new Set("alors aucun aussi autre autres avant avec avoir bien 
 let IDX = null, idxEnCours = null;
 function chargerIndex() {
   if (IDX || idxEnCours) return idxEnCours;
-  idxEnCours = fetch("data/recherche.json?v=20261121f").then(r => r.json()).then(d => {
+  idxEnCours = fetch("data/recherche.json?v=20261121g").then(r => r.json()).then(d => {
     const pos = {}; d.livres.forEach((id, k) => { pos[id] = k; });
     IDX = { pos, mots: d.mots || {}, paires: d.paires || {}, liste: Object.keys(d.mots || {}) };
     if (recherche.trim() && $("#grille")) { $("#grille").innerHTML = grilleCatalogue(); $("#resultat").textContent = texteResultat(); }
@@ -1052,7 +1052,7 @@ window.addEventListener("scroll", surDefilement, { passive: true }); surDefileme
 
 /* ---------- Chargement ---------- */
 vue.innerHTML = `<p class="chargement">Chargement de la bibliothèque…</p>`;
-Promise.all([fetch("data/livres.json?v=20261121f", { cache: "no-cache" }).then(r => r.json()), fetch("data/config.json?v=20261121f", { cache: "no-cache" }).then(r => r.json())])
+Promise.all([fetch("data/livres.json?v=20261121g", { cache: "no-cache" }).then(r => r.json()), fetch("data/config.json?v=20261121g", { cache: "no-cache" }).then(r => r.json())])
   .then(([l, c]) => {
     /* Tolérance aux fiches saisies depuis la plateforme de gestion */
     const sl = t => String(t || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");

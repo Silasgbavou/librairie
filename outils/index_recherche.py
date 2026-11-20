@@ -22,7 +22,7 @@ def normal(s):
     return "".join(c for c in s if unicodedata.category(c) != "Mn")
 
 def mots(texte):
-    return re.findall(r"[a-z0-9]+", normal(texte.replace("’", " ").replace("'", " ").replace("ʼ", " ")))
+    return re.findall(r"[a-z0-9]+", normal(texte.replace("\u00ad", "").replace("’", " ").replace("'", " ").replace("ʼ", " ")))
 
 def recoller(tokens, vocab):
     """Recolle les syllabes séparées par certaines extractions PDF (« con nais sance »)."""
