@@ -824,8 +824,6 @@ function pageConditions() {
     <p>Le règlement s'effectue en ligne, en FCFA, sur notre page de paiement sécurisée : Mobile Money ou carte bancaire. Les équivalences en euros ou en dollars affichées sur le site sont indicatives.</p>
     <h2>Conclusion de l'acquisition</h2>
     <p>L'acquisition est conclue à la confirmation du paiement ; le PDF vous est alors remis automatiquement. Pour toute question, l'auteur vous répond directement sur WhatsApp.</p>
-    <h2>Rétractation et remboursement</h2>
-    <p>Le livre numérique étant remis dès le paiement, son téléchargement ne permet pas de rétractation. Si le fichier reçu est illisible, incomplet ou ne correspond pas au titre acquis, écrivez-nous : le bon fichier vous est remis ou, à défaut, le montant vous est remboursé.</p>
     <h2>Droits d'auteur</h2>
     <p>Chaque livre est réservé à l'usage personnel de l'acquéreur. Toute reproduction, diffusion ou revente sans l'autorisation écrite de l'auteur est interdite.</p>
     <div class="liens-infos"><a class="btn btn-capsule btn-petit" href="#livraison">Livraison et problèmes</a><a class="btn btn-capsule btn-petit" href="#confidentialite">Confidentialité</a><a class="btn btn-capsule btn-petit" href="#mentions">Mentions légales</a></div>
