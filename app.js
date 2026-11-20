@@ -314,8 +314,6 @@ function noteEditeur(court) {
       <h2 id="nb-titre">Un cadeau, <span class="b">reçu avec un geste de soutien</span></h2>
       <p>Ces ouvrages ne sont pas publiés dans un but lucratif. Le montant fixé pour chaque livre reste même inférieur à son coût réel de production en PDF : il n'en couvre qu'une partie.</p>
       <p>Chaque titre engage en effet des dépenses importantes : rédaction, relecture doctrinale, correction, mise en page, conception graphique et diffusion. Puisque le prix n'atteint pas ce coût, chaque livre est d'abord un cadeau offert au lecteur. Et parce que toute œuvre a un coût, ce cadeau se reçoit avec un geste de soutien : votre contribution permet à la maison d'édition de faire avancer la publication des ouvrages à venir.</p>
-      <p>Chacun demeure libre d'aller au-delà de ce montant, dans l'esprit de la Parole :</p>
-      <blockquote>« Que chacun donne comme il l'a résolu en son cœur, sans tristesse ni contrainte ; car Dieu aime celui qui donne avec joie. »<cite>2 Corinthiens 9:7</cite></blockquote>
       <a class="btn btn-capsule btn-petit" target="_blank" rel="noopener" data-sortie="soutien" href="${wa(CFG.vente.whatsappCommandes, "Bonjour Providence Éditions Prestige, je souhaite soutenir l'œuvre d'édition des livres du Docteur B. Silas Gbavou.")}">Soutenir l'œuvre d'édition</a>
     </div>
     <ul class="ne-reperes" aria-label="En résumé">
@@ -350,7 +348,7 @@ function blocCollection() {
       ${tot > fin ? `<div class="offre-ensemble">
         <span class="oe-sur">Tarif d'ensemble</span>
         <p class="oe-prix num">Les ${LIVRES.length} ouvrages : ${px(fin)} <span class="oe-avant">au lieu de <del>${px(tot)}</del></span></p>
-        <p class="oe-texte">Ce tarif préférentiel s'applique à l'acquisition des collections et se répartit entre elles au prorata de leur valeur. Notre démarche n'étant pas commerciale, il ne s'agit pas d'une promotion, mais d'un accompagnement offert à ceux qui reçoivent l'enseignement dans son ensemble.</p>
+        <p class="oe-texte">Ce tarif préférentiel s'applique à l'acquisition des collections et se répartit entre elles au prorata de leur valeur. Notre démarche n'étant pas commerciale, il ne s'agit pas d'une promotion, mais d'une faveur accordée à ceux qui reçoivent l'enseignement dans son ensemble.</p>
       </div>` : ""}
       <div class="prix-collection">${selecteurDevise("devises-clair")}</div>
       ${infoDevise()}
@@ -937,7 +935,7 @@ window.addEventListener("scroll", surDefilement, { passive: true }); surDefileme
 
 /* ---------- Chargement ---------- */
 vue.innerHTML = `<p class="chargement">Chargement de la bibliothèque…</p>`;
-Promise.all([fetch("data/livres.json?v=20261121a").then(r => r.json()), fetch("data/config.json?v=20261121a").then(r => r.json())])
+Promise.all([fetch("data/livres.json?v=20261121b").then(r => r.json()), fetch("data/config.json?v=20261121b").then(r => r.json())])
   .then(([l, c]) => {
     TOUS = l; LIVRES = l.filter(x => x.disponible !== false); CFG = c;
     THEMES = [...new Set(LIVRES.map(x => x.theme))];
